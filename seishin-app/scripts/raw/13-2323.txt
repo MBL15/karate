@@ -1,0 +1,150 @@
+import { motion } from "motion/react";
+const imgArrowLeft = "https://www.figma.com/api/mcp/asset/ea4b5c7f-cc64-4b43-b0fe-a9776d4a2102.svg";
+const imgBell = "https://www.figma.com/api/mcp/asset/fd24ba5e-710e-4345-aebd-c93118e4002f.svg";
+const imgCalendar = "https://www.figma.com/api/mcp/asset/3f2ccbb1-8672-42a3-ac44-794d039a3905.svg";
+const imgMapPin = "https://www.figma.com/api/mcp/asset/7375fa0c-fd7a-42bc-9763-4b0d345bc3f4.svg";
+const imgActivitySquare = "https://www.figma.com/api/mcp/asset/991ec35f-dd5d-420d-9997-ae0130032cfd.svg";
+const imgRussianRuble = "https://www.figma.com/api/mcp/asset/4a902baa-e30f-4409-a4d2-6ec8454f30da.svg";
+const imgHouse = "https://www.figma.com/api/mcp/asset/f7910db2-0845-4ce1-9ea0-e7aab5309440.svg";
+const imgUser = "https://www.figma.com/api/mcp/asset/0f596927-f829-4b90-b4ec-3240d0a227e3.svg";
+const imgAward = "https://www.figma.com/api/mcp/asset/e1c14591-8819-4612-984c-1771830b54b3.svg";
+const imgFolder = "https://www.figma.com/api/mcp/asset/4321c8d1-cbca-4967-8301-251419a3cedf.svg";
+
+export default function Component() {
+  return (
+    <div className="bg-[#f4f7fa] content-stretch flex flex-col items-start relative size-full" data-node-id="13:2323" data-name="Приглашение на соревнование">
+      <motion.div className="[word-break:break-word] bg-white content-stretch flex h-[28px] items-center justify-between leading-[normal] not-italic overflow-clip px-[20px] relative shrink-0 text-[#172033] w-full" data-node-id="13:2324" data-name="Статус">
+        <p className="font-['Inter:Semi_Bold'] font-semibold relative shrink-0 text-[10px] whitespace-nowrap" data-node-id="13:2325">
+          9:41
+        </p>
+        <p className="font-['Inter:Regular'] font-normal relative shrink-0 text-[9px] whitespace-pre" data-node-id="13:2326">{`●●●  Wi‑Fi  92%`}</p>
+      </motion.div>
+      <motion.div className="content-stretch flex flex-[1_0_0] flex-col gap-[16px] items-start min-h-px pb-[16px] pt-[18px] px-[18px] relative w-full" data-node-id="13:2327" data-name="Содержимое">
+        <div className="content-stretch flex gap-[12px] items-center overflow-clip relative shrink-0 w-full" data-node-id="13:2328" data-name="Заголовок">
+          <div className="relative shrink-0 size-[20px]" data-node-id="13:2551" data-name="arrow-left">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgArrowLeft} />
+          </div>
+          <p className="[word-break:break-word] flex-[1_0_0] font-['Inter:Bold'] font-bold leading-[normal] min-w-px not-italic relative text-[#172033] text-[22px]" data-node-id="13:2330">
+            Соревнование
+          </p>
+          <div className="relative shrink-0 size-[20px]" data-node-id="13:2554" data-name="bell">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgBell} />
+          </div>
+        </div>
+        <div className="[word-break:break-word] bg-[#102c53] content-stretch flex flex-col gap-[6px] h-[134px] items-start not-italic overflow-clip p-[18px] relative rounded-[18px] shrink-0 w-full" data-node-id="13:2332" data-name="Афиша">
+          <p className="font-['Inter:Bold'] font-bold leading-[normal] relative shrink-0 text-[#d7a62a] text-[10px] whitespace-nowrap" data-node-id="13:2333">
+            КУБОК КЛУБА
+          </p>
+          <p className="font-['Inter:Bold'] font-bold leading-[1.1] min-w-full relative shrink-0 text-[22px] text-white w-[min-content]" data-node-id="13:2334">
+            Кубок Сэйсин 2026
+          </p>
+          <p className="font-['Inter:Regular'] font-normal leading-[normal] relative shrink-0 text-[#b8c5d8] text-[11px] whitespace-nowrap" data-node-id="13:2335">
+            12 октября · Москва
+          </p>
+        </div>
+        <div className="bg-white content-stretch flex flex-col gap-[12px] items-start overflow-clip p-[16px] relative rounded-[16px] shadow-[0px_8px_24px_0px_rgba(23,32,51,0.05)] shrink-0 w-full" data-node-id="13:2336" data-name="Детали">
+          <p className="[word-break:break-word] font-['Inter:Bold'] font-bold leading-[normal] not-italic relative shrink-0 text-[#172033] text-[14px] whitespace-nowrap" data-node-id="13:2337">
+            Приглашён Михаил
+          </p>
+          <div className="content-stretch flex gap-[10px] items-center overflow-clip relative shrink-0" data-node-id="13:2338" data-name="Деталь">
+            <div className="relative shrink-0 size-[17px]" data-node-id="13:2557" data-name="calendar">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgCalendar} />
+            </div>
+            <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#172033] text-[11px] whitespace-nowrap" data-node-id="13:2340">
+              12 октября, 09:00
+            </p>
+          </div>
+          <div className="content-stretch flex gap-[10px] items-center overflow-clip relative shrink-0" data-node-id="13:2341" data-name="Деталь">
+            <div className="relative shrink-0 size-[17px]" data-node-id="13:2560" data-name="map-pin">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgMapPin} />
+            </div>
+            <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#172033] text-[11px] whitespace-nowrap" data-node-id="13:2343">
+              СК «Олимп», ул. Спортивная, 4
+            </p>
+          </div>
+          <div className="content-stretch flex gap-[10px] items-center overflow-clip relative shrink-0" data-node-id="13:2344" data-name="Деталь">
+            <div className="relative shrink-0 size-[17px]" data-node-id="13:2563" data-name="activity-square">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgActivitySquare} />
+            </div>
+            <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#172033] text-[11px] whitespace-nowrap" data-node-id="13:2346">
+              Кумитэ · 8–9 лет
+            </p>
+          </div>
+          <div className="content-stretch flex gap-[10px] items-center overflow-clip relative shrink-0" data-node-id="13:2347" data-name="Деталь">
+            <div className="relative shrink-0 size-[17px]" data-node-id="13:2566" data-name="russian-ruble">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgRussianRuble} />
+            </div>
+            <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#172033] text-[11px] whitespace-nowrap" data-node-id="13:2349">
+              Взнос 1 800 ₽
+            </p>
+          </div>
+        </div>
+        <div className="[word-break:break-word] bg-white content-stretch flex flex-col gap-[12px] items-start leading-[normal] not-italic overflow-clip p-[16px] relative rounded-[16px] shadow-[0px_8px_24px_0px_rgba(23,32,51,0.05)] shrink-0 w-full whitespace-nowrap" data-node-id="13:2350" data-name="Весовая категория">
+          <p className="font-['Inter:Bold'] font-bold relative shrink-0 text-[#172033] text-[13px]" data-node-id="13:2351">
+            Актуальный вес ребёнка
+          </p>
+          <p className="font-['Inter:Regular'] font-normal relative shrink-0 text-[#6f7b91] text-[10px]" data-node-id="13:2352">
+            Нужен для определения весовой категории
+          </p>
+          <div className="bg-[#f4f7fa] border border-[#20a464] border-solid content-stretch flex flex-col items-start justify-between overflow-clip p-[13px] relative rounded-[10px] shrink-0 w-full" data-node-id="13:2353" data-name="Поле веса">
+            <p className="font-['Inter:Semi_Bold'] font-semibold relative shrink-0 text-[#172033] text-[16px]" data-node-id="13:2354">
+              31,5
+            </p>
+            <p className="font-['Inter:Regular'] font-normal relative shrink-0 text-[#6f7b91] text-[12px]" data-node-id="13:2355">
+              кг
+            </p>
+          </div>
+        </div>
+        <div className="content-stretch flex gap-[10px] items-start overflow-clip relative shrink-0 w-full" data-node-id="13:2356" data-name="Ответ">
+          <div className="bg-white border border-[#e5eaf0] border-solid content-stretch flex flex-[1_0_0] flex-col items-center min-w-px overflow-clip py-[13px] relative rounded-[11px]" data-node-id="13:2357" data-name="Отказаться">
+            <p className="[word-break:break-word] font-['Inter:Semi_Bold'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#6f7b91] text-[12px] whitespace-nowrap" data-node-id="13:2358">
+              Не участвуем
+            </p>
+          </div>
+          <div className="bg-[#20a464] content-stretch flex flex-[1_0_0] flex-col items-center min-w-px overflow-clip py-[13px] relative rounded-[11px]" data-node-id="13:2359" data-name="Подтвердить">
+            <p className="[word-break:break-word] font-['Inter:Bold'] font-bold leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap" data-node-id="13:2360">
+              Участвуем
+            </p>
+          </div>
+        </div>
+        <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#6f7b91] text-[10px] text-center w-full" data-node-id="13:2361">
+          Ответьте до 30 сентября
+        </p>
+      </motion.div>
+      <motion.div className="bg-white border-[#e5eaf0] border-solid border-t content-stretch flex h-[68px] items-start justify-between overflow-clip px-[16px] py-[10px] relative shrink-0 w-full" data-node-id="13:2362" data-name="Навигация">
+        <div className="content-stretch flex flex-col gap-[4px] items-center overflow-clip relative shrink-0 w-[70px]" data-node-id="13:2363" data-name="Раздел">
+          <div className="relative shrink-0 size-[19px]" data-node-id="13:2569" data-name="house">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgHouse} />
+          </div>
+          <p className="[word-break:break-word] font-['Inter:Semi_Bold'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#20a464] text-[9px] whitespace-nowrap" data-node-id="13:2365">
+            Главная
+          </p>
+        </div>
+        <div className="content-stretch flex flex-col gap-[4px] items-center overflow-clip relative shrink-0 w-[70px]" data-node-id="13:2366" data-name="Раздел">
+          <div className="relative shrink-0 size-[19px]" data-node-id="13:2572" data-name="user">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgUser} />
+          </div>
+          <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#6f7b91] text-[9px] whitespace-nowrap" data-node-id="13:2368">
+            Профиль
+          </p>
+        </div>
+        <div className="content-stretch flex flex-col gap-[4px] items-center overflow-clip relative shrink-0 w-[70px]" data-node-id="13:2369" data-name="Раздел">
+          <div className="relative shrink-0 size-[19px]" data-node-id="13:2575" data-name="award">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgAward} />
+          </div>
+          <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#6f7b91] text-[9px] whitespace-nowrap" data-node-id="13:2371">
+            Награды
+          </p>
+        </div>
+        <div className="content-stretch flex flex-col gap-[4px] items-center overflow-clip relative shrink-0 w-[70px]" data-node-id="13:2372" data-name="Раздел">
+          <div className="relative shrink-0 size-[19px]" data-node-id="13:2578" data-name="folder">
+            <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFolder} />
+          </div>
+          <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[normal] not-italic relative shrink-0 text-[#6f7b91] text-[9px] whitespace-nowrap" data-node-id="13:2374">
+            Архив
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

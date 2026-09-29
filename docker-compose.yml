@@ -1,0 +1,22 @@
+name: karate-hub
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: karate-hub:latest
+    container_name: karate-hub
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_APPLICATION_NAME: karate-hub
+    restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: karate-hub-tunnel
+    command: tunnel --no-autoupdate --url http://app:8080
+    depends_on:
+      - app
+    restart: unless-stopped

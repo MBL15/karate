@@ -1,0 +1,13 @@
+.git
+.superdesign
+**/.gradle
+**/build
+**/dist
+**/node_modules
+**/.vite
+**/.idea
+**/.vscode
+**/agent-transcripts
+seishin-backend/src/main/resources/static/assets
+seishin-backend/src/main/resources/static/index.html
+*.log

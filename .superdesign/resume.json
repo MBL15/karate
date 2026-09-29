@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/app": {
+      "targetKind": "existing-ui",
+      "projectId": "e3cf0295-2b39-4385-b905-4e2a2013f39d",
+      "baselineDraftId": "ca3fb1a3-1031-4f5d-b402-0f6f1cf2f6aa",
+      "activeDraftId": "ca3fb1a3-1031-4f5d-b402-0f6f1cf2f6aa",
+      "designSystemPath": ".superdesign/design-system.md",
+      "device": "mobile",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "seishin-app/src/pages/ParentHome.tsx",
+        "seishin-app/src/components/parent/ParentPageShell.tsx",
+        "seishin-app/src/components/parent/ParentBottomNav.tsx",
+        "seishin-app/src/components/parent/ChildSwitcher.tsx",
+        "seishin-app/src/components/ui/ProgressBar.tsx",
+        "seishin-app/src/index.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "cd5c4148bc27b8c3a4c918e4ef9e20015617a72aba0700cd9f635599ca8f0f6d",
+        "seishin-app/src/pages/ParentHome.tsx": "b5f9826709e5150b3209cf650e108f7ce6635917c3af537bc869ec2cd454b796",
+        "seishin-app/src/components/parent/ParentPageShell.tsx": "b49f22403eefddb48e42ce464ddc3a1813a3d7479ef3addcfd7268b7efe09539",
+        "seishin-app/src/components/parent/ParentBottomNav.tsx": "7d2a1bd2e71c6ac4d6a7cae3df04d79af5d9276e5414904b9d802cc1433945c4",
+        "seishin-app/src/components/parent/ChildSwitcher.tsx": "f5bd5d754708af96fb7c8641475203d036e90570a70615a2f6b608a8476094cb",
+        "seishin-app/src/components/ui/ProgressBar.tsx": "1b8167ea13d8a75723fce6ac6070b764fe6b3998932e93362f81098fb28f3729",
+        "seishin-app/src/index.css": "a75ca30590dfd6b95787e0b23757eb78a208327f5bab98011931850fb01c070b"
+      },
+      "components": [],
+      "drafts": {
+        "ca3fb1a3-1031-4f5d-b402-0f6f1cf2f6aa": {
+          "title": "SEISHIN Parent Dashboard Redesign",
+          "visualDirection": "navy hero dashboard with belt progress, payment/training chips, urgent competition card",
+          "currentVersion": 2
+        }
+      },
+      "updatedAt": "2026-09-24T17:35:00.000Z"
+    }
+  }
+}

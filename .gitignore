@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+seishin-backend/build/
+seishin-backend/.gradle/
+seishin-app/dist/
+
+# Local env
+.env
+.env.*
+*.local
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
