@@ -7,6 +7,7 @@ import { ParentHero } from '../components/parent/ParentHero'
 import { ParentPageShell } from '../components/parent/ParentPageShell'
 import { ParentError, ParentLoading } from '../components/parent/ParentScreenState'
 import { useParentChild } from '../context/ParentChildContext'
+import { LogoutButton } from '../components/auth/LogoutButton'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { initialLetter, nextBeltLabel } from '../utils/format'
 
@@ -117,6 +118,10 @@ export function ChildProfile() {
           </div>
         </div>
       )}
+
+      <div className="mt-6 max-w-lg">
+        <LogoutButton />
+      </div>
     </ParentPageShell>
   )
 }

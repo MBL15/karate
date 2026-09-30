@@ -15,7 +15,7 @@ gradlew.bat bootRun
 Сервер: `http://localhost:8080`  
 H2 Console: `http://localhost:8080/h2-console` (JDBC: `jdbc:h2:mem:seishin`, user: `sa`, password пустой)
 
-CORS разрешён для `http://localhost:5173`.
+CORS разрешён для Vite (`http://localhost:*`) и Capacitor (`https://localhost`, `capacitor://localhost`).
 
 ## Демо-учётные записи
 

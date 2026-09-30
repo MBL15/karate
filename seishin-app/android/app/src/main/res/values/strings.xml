@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Karate Hub</string>
+    <string name="title_activity_main">Karate Hub</string>
+    <string name="package_name">com.seishin.karatehub</string>
+    <string name="custom_url_scheme">com.seishin.karatehub</string>
+</resources>

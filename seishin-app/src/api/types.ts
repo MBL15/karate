@@ -58,6 +58,16 @@ export type TrainingReminder = {
   message: string
 }
 
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'MAKEUP' | 'GUEST'
+
+export type SessionAttendance = {
+  sessionId?: number | null
+  groupId: number
+  sessionDate: string
+  startTime: string
+  entries: { studentId: number; studentName: string; status: AttendanceStatus }[]
+}
+
 export type CoachDashboard = {
   totalStudents: number
   totalGroups: number

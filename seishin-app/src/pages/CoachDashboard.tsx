@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { coachApi } from '../api/coach'
 import type { CoachDashboard, Payment, StudentSummary } from '../api/types'
 import { ApiError } from '../api/client'
+import { LogoutButton } from '../components/auth/LogoutButton'
 import { CoachPageShell } from '../components/coach/CoachPageShell'
 import { CoachError, CoachLoading } from '../components/coach/CoachScreenState'
 import { IconArrowRight, IconCalendar, IconCheck, IconTrophy, IconUsers } from '../components/ui/Icons'
@@ -114,22 +115,6 @@ export function CoachDashboard() {
     setActionIsError(isError)
   }
 
-  const markAllPresent = async () => {
-    if (!group || students.length === 0) return
-    try {
-      const today = new Date().toISOString().slice(0, 10)
-      await coachApi.markAttendance({
-        groupId: group.id,
-        sessionDate: today,
-        startTime: '17:00:00',
-        entries: students.map((s) => ({ studentId: s.id, status: 'PRESENT' as const })),
-      })
-      showAction('Посещаемость сохранена')
-    } catch (e) {
-      showAction(e instanceof ApiError ? e.message : 'Ошибка', true)
-    }
-  }
-
   const createInvite = async () => {
     try {
       const res = await coachApi.createInviteCode()
@@ -164,9 +149,9 @@ export function CoachDashboard() {
       <button type="button" onClick={createInvite} className="btn-on-dark">
         Код клуба
       </button>
-      <button type="button" onClick={markAllPresent} className="btn-coach">
+      <Link to="/coach/attendance" className="btn-coach">
         Отметить посещаемость
-      </button>
+      </Link>
     </>
   )
 
@@ -399,6 +384,10 @@ export function CoachDashboard() {
               </ul>
             </div>
           )}
+
+          <div className="max-w-sm lg:hidden">
+            <LogoutButton />
+          </div>
         </>
       )}
     </CoachPageShell>

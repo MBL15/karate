@@ -1,3 +1,5 @@
+import { isNativeApp } from '../utils/platform'
+
 export function getApiBase(): string {
   return import.meta.env.VITE_API_URL ?? ''
 }
@@ -38,10 +40,13 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   try {
     res = await fetch(`${getApiBase()}${path}`, { ...options, headers })
   } catch {
-    throw new ApiError(
-      0,
-      'Сервер недоступен. Запустите бэкенд: cd seishin-backend && .\\gradlew.bat bootRun',
-    )
+    const base = getApiBase()
+    const hint = isNativeApp()
+      ? base
+        ? `Запустите бэкенд на ${base.replace(/\/api.*/, '')} (cd seishin-backend && .\\gradlew.bat bootRun). На реальном устройстве укажите IP ПК в .env.mobile.`
+        : 'Задайте VITE_API_URL в .env.mobile и пересоберите: npm run cap:sync'
+      : 'Запустите бэкенд: cd seishin-backend && .\\gradlew.bat bootRun'
+    throw new ApiError(0, `Сервер недоступен. ${hint}`)
   }
 
   if (res.status === 401) {
@@ -65,6 +70,10 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     throw new ApiError(res.status, message)
   }
 
-  if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
+  if (res.status === 204 || res.status === 205) return undefined as T
+
+  const text = await res.text()
+  if (!text.trim()) return undefined as T
+
+  return JSON.parse(text) as T
 }

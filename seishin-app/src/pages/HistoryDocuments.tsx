@@ -7,7 +7,7 @@ import { ParentPageShell } from '../components/parent/ParentPageShell'
 import { ParentError, ParentLoading } from '../components/parent/ParentScreenState'
 import { IconFolder } from '../components/ui/Icons'
 import { useParentChild } from '../context/ParentChildContext'
-import { attendanceDayClass, paymentStatusUi } from '../utils/format'
+import { attendanceDayClass, attendanceStatusLabel, formatDate, paymentStatusUi } from '../utils/format'
 
 type Tab = 'history' | 'payments' | 'documents'
 
@@ -102,27 +102,56 @@ export function HistoryDocuments() {
       ) : error ? (
         <ParentError message={error} />
       ) : tab === 'history' ? (
-        <div className="card p-5 lg:p-6">
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-text">Посещаемость</p>
-            <span className="badge-success">
-              {presentCount} из {total} · {attendancePct}%
-            </span>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {history.map((entry) => {
-              const day = new Date(entry.date).getDate()
-              return (
-                <div
-                  key={entry.date}
-                  title={`${entry.groupName}: ${entry.status}`}
-                  className={`flex size-9 items-center justify-center rounded-xl text-xs font-semibold lg:size-10 ${attendanceDayClass(entry.status)}`}
-                >
-                  {day}
+        <div className="space-y-4">
+          <div className="card p-5 lg:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-bold text-text">Посещаемость</p>
+              <span className="badge-success">
+                {presentCount} из {history.length || 0} · {history.length ? attendancePct : 0}%
+              </span>
+            </div>
+            {history.length > 0 ? (
+              <>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {history.map((entry, index) => {
+                    const day = new Date(`${entry.date}T12:00:00`).getDate()
+                    return (
+                      <div
+                        key={`${entry.date}-${entry.groupName}-${index}`}
+                        title={`${formatDate(entry.date)} · ${entry.groupName}: ${attendanceStatusLabel(entry.status)}`}
+                        className={`flex size-9 items-center justify-center rounded-xl text-xs font-semibold lg:size-10 ${attendanceDayClass(entry.status)}`}
+                      >
+                        {day}
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
+                <p className="mt-4 text-xs text-text-muted">
+                  Зелёный — был или отработка, красный — пропуск, жёлтый — гость
+                </p>
+              </>
+            ) : (
+              <p className="mt-4 text-sm text-text-secondary">
+                Записей пока нет. После отметки тренером занятия данные появятся здесь.
+              </p>
+            )}
           </div>
+
+          {history.length > 0 && (
+            <ul className="grid gap-3">
+              {history.map((entry, index) => (
+                <li key={`${entry.date}-${entry.groupName}-${index}-row`} className="card flex items-center justify-between gap-3 p-4">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-text">{formatDate(entry.date)}</p>
+                    <p className="mt-0.5 truncate text-sm text-text-secondary">{entry.groupName}</p>
+                  </div>
+                  <span className={`badge shrink-0 ${attendanceDayClass(entry.status).includes('d94b55') ? 'badge-error' : entry.status === 'GUEST' ? 'badge-warning' : 'badge-success'}`}>
+                    {attendanceStatusLabel(entry.status)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       ) : tab === 'payments' ? (
         <div className="grid gap-3 lg:grid-cols-2">

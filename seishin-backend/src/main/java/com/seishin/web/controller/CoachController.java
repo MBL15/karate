@@ -71,6 +71,16 @@ public class CoachController {
         return ResponseEntity.ok(coachService.assignBelt(SecurityUtils.requireCoach(), studentId, dto));
     }
 
+    @GetMapping("/sessions/attendance")
+    public ResponseEntity<SessionAttendanceDto> getSessionAttendance(
+            @RequestParam Long groupId,
+            @RequestParam LocalDate sessionDate,
+            @RequestParam(required = false) java.time.LocalTime startTime) {
+        var time = startTime != null ? startTime : java.time.LocalTime.of(17, 0);
+        return ResponseEntity.ok(coachService.getSessionAttendance(
+                SecurityUtils.requireCoach(), groupId, sessionDate, time));
+    }
+
     @PostMapping("/sessions/attendance/bulk")
     public ResponseEntity<Void> bulkAttendance(@Valid @RequestBody BulkAttendanceDto dto) {
         coachService.recordBulkAttendance(SecurityUtils.requireCoach(), dto);

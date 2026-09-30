@@ -1,4 +1,5 @@
 import type {
+  AttendanceStatus,
   BadgeDefinition,
   BeltLevel,
   ChatMessage,
@@ -9,6 +10,7 @@ import type {
   GroupSummary,
   Payment,
   ScheduleSlot,
+  SessionAttendance,
   StudentSummary,
   TrainingReminder,
 } from './types'
@@ -45,11 +47,15 @@ export const coachApi = {
       body: JSON.stringify({ beltLevelId }),
     }),
   payments: () => apiFetch<Payment[]>('/api/payments'),
+  getAttendance: (groupId: number, sessionDate: string, startTime: string) =>
+    apiFetch<SessionAttendance>(
+      `/api/coach/sessions/attendance?groupId=${groupId}&sessionDate=${sessionDate}&startTime=${encodeURIComponent(startTime)}`,
+    ),
   markAttendance: (payload: {
     groupId: number
     sessionDate: string
     startTime: string
-    entries: { studentId: number; status: 'PRESENT' | 'ABSENT' | 'MAKEUP' | 'GUEST' }[]
+    entries: { studentId: number; status: AttendanceStatus }[]
   }) =>
     apiFetch<void>('/api/coach/sessions/attendance/bulk', {
       method: 'POST',

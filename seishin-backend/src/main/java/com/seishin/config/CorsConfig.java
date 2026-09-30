@@ -14,7 +14,7 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${seishin.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*}")
+    @Value("${seishin.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*,https://localhost,capacitor://localhost,ionic://localhost}")
     private String allowedOriginPatterns;
 
     @Value("${seishin.cors.allowed-origins:}")

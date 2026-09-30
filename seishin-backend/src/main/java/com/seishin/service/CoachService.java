@@ -176,15 +176,46 @@ public class CoachService {
                 .build();
     }
 
+    public SessionAttendanceDto getSessionAttendance(
+            UserPrincipal coach, Long groupId, LocalDate sessionDate, java.time.LocalTime startTime) {
+        TrainingGroup group = coachAccessService.requireGroupAccess(coach, groupId);
+        var sessionOpt = sessionRepository.findByGroupIdAndSessionDateAndStartTime(groupId, sessionDate, startTime);
+        var students = groupStudentRepository.findByGroupId(groupId).stream()
+                .map(gs -> gs.getStudent())
+                .toList();
+        var recordsByStudent = sessionOpt
+                .map(session -> attendanceRepository.findBySessionId(session.getId()).stream()
+                        .collect(java.util.stream.Collectors.toMap(r -> r.getStudent().getId(), AttendanceRecord::getStatus)))
+                .orElse(java.util.Map.of());
+
+        var entries = students.stream()
+                .map(student -> SessionAttendanceDto.EntryDto.builder()
+                        .studentId(student.getId())
+                        .studentName(student.getFirstName() + " " + student.getLastName())
+                        .status(recordsByStudent.getOrDefault(student.getId(), AttendanceStatus.PRESENT))
+                        .build())
+                .toList();
+
+        return SessionAttendanceDto.builder()
+                .sessionId(sessionOpt.map(TrainingSession::getId).orElse(null))
+                .groupId(group.getId())
+                .sessionDate(sessionDate)
+                .startTime(startTime)
+                .entries(entries)
+                .build();
+    }
+
     @Transactional
     public void recordBulkAttendance(UserPrincipal coach, BulkAttendanceDto dto) {
         TrainingGroup group = coachAccessService.requireGroupAccess(coach, dto.getGroupId());
-        TrainingSession session = TrainingSession.builder()
-                .group(group)
-                .sessionDate(dto.getSessionDate())
-                .startTime(dto.getStartTime())
-                .build();
-        session = sessionRepository.save(session);
+        TrainingSession session = sessionRepository
+                .findByGroupIdAndSessionDateAndStartTime(group.getId(), dto.getSessionDate(), dto.getStartTime())
+                .orElseGet(() -> sessionRepository.save(TrainingSession.builder()
+                        .group(group)
+                        .sessionDate(dto.getSessionDate())
+                        .startTime(dto.getStartTime())
+                        .build()));
+
         for (BulkAttendanceDto.AttendanceEntryDto entry : dto.getEntries()) {
             Student student = studentRepository.findById(entry.getStudentId())
                     .orElseThrow(() -> new NotFoundException("Ученик не найден: " + entry.getStudentId()));
@@ -195,11 +226,14 @@ public class CoachService {
                 student.setGuest(true);
                 studentRepository.save(student);
             }
-            attendanceRepository.save(AttendanceRecord.builder()
-                    .session(session)
-                    .student(student)
-                    .status(entry.getStatus())
-                    .build());
+            var record = attendanceRepository
+                    .findBySessionIdAndStudentId(session.getId(), student.getId())
+                    .orElseGet(() -> AttendanceRecord.builder()
+                            .session(session)
+                            .student(student)
+                            .build());
+            record.setStatus(entry.getStatus());
+            attendanceRepository.save(record);
             progressService.recalculateProgress(student.getId());
         }
     }

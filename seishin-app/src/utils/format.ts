@@ -36,7 +36,22 @@ export function paymentStatusUi(status: 'PAID' | 'OVERDUE' | 'PENDING', dueDate?
 
 export function attendanceDayClass(status: 'PRESENT' | 'ABSENT' | 'MAKEUP' | 'GUEST') {
   if (status === 'ABSENT') return 'bg-[#fff0f1] text-[#d94b55]'
+  if (status === 'MAKEUP') return 'bg-[#eef4ff] text-[#3b5bdb]'
+  if (status === 'GUEST') return 'bg-[#fff7dc] text-[#d7a62a]'
   return 'bg-[#e8f7ef] text-[#20a464]'
+}
+
+export function attendanceStatusLabel(status: 'PRESENT' | 'ABSENT' | 'MAKEUP' | 'GUEST') {
+  switch (status) {
+    case 'PRESENT':
+      return 'Был'
+    case 'ABSENT':
+      return 'Нет'
+    case 'MAKEUP':
+      return 'Отработка'
+    case 'GUEST':
+      return 'Гость'
+  }
 }
 
 const NEXT_BELT: Record<string, string> = {

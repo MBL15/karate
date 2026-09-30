@@ -5,6 +5,7 @@ import { CoachLayout } from './layouts/CoachLayout'
 import { ParentAppLayout } from './layouts/ParentAppLayout'
 import { Achievements } from './pages/Achievements'
 import { ChildProfile } from './pages/ChildProfile'
+import { CoachAttendancePage } from './pages/coach/CoachAttendancePage'
 import { CoachAwardsPage } from './pages/coach/CoachAwardsPage'
 import { CoachChatPage } from './pages/coach/CoachChatPage'
 import { CoachCompetitionsPage } from './pages/coach/CoachCompetitionsPage'
@@ -42,6 +43,7 @@ export default function App() {
         }
       >
         <Route index element={<CoachDashboard />} />
+        <Route path="attendance" element={<CoachAttendancePage />} />
         <Route path="students" element={<CoachStudentsPage />} />
         <Route path="schedule" element={<CoachSchedulePage />} />
         <Route path="awards" element={<CoachAwardsPage />} />

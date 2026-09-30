@@ -76,6 +76,15 @@ export function IconCheck(p: IconProps) {
   )
 }
 
+export function IconLock(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </Svg>
+  )
+}
+
 export function IconCalendar(p: IconProps) {
   return (
     <Svg {...p}>
@@ -114,6 +123,14 @@ export function IconArrowRight(p: IconProps) {
   return (
     <Svg {...p}>
       <path d="M5 12h14M13 6l6 6-6 6" />
+    </Svg>
+  )
+}
+
+export function IconArrowLeft(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M19 12H5M11 6l-6 6 6 6" />
     </Svg>
   )
 }

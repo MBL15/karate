@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { parentApi } from '../api/parent'
-import type { ParentChildHome } from '../api/types'
+import type { HistoryEntry, ParentChildHome } from '../api/types'
 import { ApiError } from '../api/client'
 import { ParentChildHeroBar } from '../components/parent/ParentChildHeroBar'
 import { ParentPageShell } from '../components/parent/ParentPageShell'
@@ -14,7 +14,7 @@ import { QuickActions } from '../components/ui/QuickActions'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { useAuth } from '../context/AuthContext'
 import { useParentChild } from '../context/ParentChildContext'
-import { formatDate, nextBeltLabel, paymentStatusUi } from '../utils/format'
+import { attendanceDayClass, attendanceStatusLabel, formatDate, nextBeltLabel, paymentStatusUi } from '../utils/format'
 
 const imgUser = '/assets/parent/user.svg'
 const imgAward = '/assets/parent/award.svg'
@@ -57,20 +57,24 @@ export function ParentHome() {
   const { user } = useAuth()
   const { selectedChild, selectedChildId, loading: childrenLoading, error: childrenError } = useParentChild()
   const [home, setHome] = useState<ParentChildHome | null>(null)
+  const [history, setHistory] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const loadHome = useCallback(() => {
     if (!selectedChildId) {
       setHome(null)
+      setHistory([])
       setLoading(false)
       return
     }
     setLoading(true)
     setError(null)
-    parentApi
-      .home(selectedChildId)
-      .then(setHome)
+    Promise.all([parentApi.home(selectedChildId), parentApi.history(selectedChildId)])
+      .then(([homeData, historyData]) => {
+        setHome(homeData)
+        setHistory(historyData)
+      })
       .catch((e) => setError(e instanceof ApiError ? e.message : 'Ошибка загрузки'))
       .finally(() => setLoading(false))
   }, [selectedChildId])
@@ -105,6 +109,9 @@ export function ParentHome() {
     : '—'
 
   const tournamentLabel = competition ? 'Есть' : 'Нет'
+  const presentCount = history.filter((h) => h.status === 'PRESENT' || h.status === 'MAKEUP').length
+  const attendancePct = history.length ? Math.round((presentCount / history.length) * 100) : 0
+  const latestAttendance = history[0]
 
   return (
     <ParentPageShell
@@ -183,6 +190,36 @@ export function ParentHome() {
             <BeltProgressPanel home={home} />
           </div>
 
+          {history.length > 0 && (
+            <div className="fade-in-up stagger-2">
+              <SectionHeader
+                title="Посещаемость"
+                subtitle={`${presentCount} из ${history.length} занятий · ${attendancePct}%`}
+                action={
+                  <Link to="/app/history" className="text-xs font-semibold text-brand-green hover:underline">
+                    Все записи
+                  </Link>
+                }
+              />
+              <div className="card mt-3 p-5">
+                <div className="flex flex-wrap gap-2">
+                  {history.slice(0, 14).map((entry, index) => {
+                    const day = new Date(`${entry.date}T12:00:00`).getDate()
+                    return (
+                      <div
+                        key={`${entry.date}-${index}`}
+                        title={`${formatDate(entry.date)}: ${attendanceStatusLabel(entry.status)}`}
+                        className={`flex size-9 items-center justify-center rounded-xl text-xs font-semibold ${attendanceDayClass(entry.status)}`}
+                      >
+                        {day}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="fade-in-up stagger-2">
             <SectionHeader title="Обзор" subtitle="Актуальная информация" />
             <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -203,6 +240,19 @@ export function ParentHome() {
                 icon={<IconCheck size={18} />}
                 accent={payment ? paymentAccent : 'neutral'}
                 badge={payment ? <PaymentBadge status={payment.status} dueDate={payment.dueDate} /> : undefined}
+              />
+
+              <DashboardCard
+                label="Посещения"
+                title={history.length ? `${attendancePct}%` : 'Нет данных'}
+                description={
+                  latestAttendance
+                    ? `Последнее: ${formatDate(latestAttendance.date)} · ${attendanceStatusLabel(latestAttendance.status)}`
+                    : 'Тренер отметит после занятия'
+                }
+                icon={<IconCalendar size={18} />}
+                accent="green"
+                to="/app/history"
               />
 
               <DashboardCard

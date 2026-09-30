@@ -4,6 +4,7 @@ import { IconPlus } from '../ui/Icons'
 
 const imgHome = '/assets/parent/house.svg'
 const imgUser = '/assets/parent/user.svg'
+const imgFolder = '/assets/parent/folder.svg'
 const imgTrophy = '/assets/parent/trophy.svg'
 
 type Tab = {
@@ -15,8 +16,9 @@ type Tab = {
 
 const tabs: Tab[] = [
   { to: '/app', label: 'Главная', icon: imgHome, end: true },
-  { to: '/app/profile', label: 'Профиль', icon: imgUser },
+  { to: '/app/history', label: 'Посещения', icon: imgFolder },
   { to: '/app/competition', label: 'Турниры', icon: imgTrophy },
+  { to: '/app/profile', label: 'Профиль', icon: imgUser },
 ]
 
 function ParentTab({ tab }: { tab: Tab }) {
@@ -53,35 +55,6 @@ function ParentTab({ tab }: { tab: Tab }) {
   )
 }
 
-function SecretTab() {
-  return (
-    <NavLink
-      to="/app/secret"
-      className={({ isActive }) =>
-        `flex h-full w-full flex-col items-center justify-center gap-1.5 transition-colors ${
-          isActive ? 'text-brand-green' : 'text-text-muted/60'
-        }`
-      }
-      aria-label="Секретный раздел"
-    >
-      {({ isActive }) => (
-        <>
-          <span
-            className={`flex size-6 items-center justify-center text-sm font-semibold leading-none ${
-              isActive ? 'text-brand-green' : 'text-text-muted/70'
-            }`}
-          >
-            ?
-          </span>
-          <span className="text-[10px] font-medium leading-none opacity-0" aria-hidden>
-            ·
-          </span>
-        </>
-      )}
-    </NavLink>
-  )
-}
-
 export function ParentMobileNav() {
   const { setAddChildOpen } = useParentChild()
 
@@ -107,7 +80,7 @@ export function ParentMobileNav() {
               <span className="text-[10px] font-medium leading-none text-text-muted">Добавить</span>
             </button>
             <ParentTab tab={tabs[2]} />
-            <SecretTab />
+            <ParentTab tab={tabs[3]} />
           </div>
         </div>
       </div>
