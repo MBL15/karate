@@ -71,7 +71,7 @@ function AuthRolePicker({ register }: { register: boolean }) {
       points={['Группы, журнал и награды для тренера', 'Дневник, пояс и чат для родителя', 'Демо-вход без своей почты']}
     >
       <p className="text-xs font-semibold tracking-[0.16em] text-text-muted uppercase">Karate Hub</p>
-      <h1 className="mt-2 text-3xl font-bold tracking-tight text-text">{register ? 'Регистрация' : 'Вход'}</h1>
+      <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-text">{register ? 'Регистрация' : 'Вход'}</h1>
       <p className="mt-2 text-sm leading-6 text-text-secondary">
         {register ? 'Выберите роль — дальше откроется своя анкета.' : 'Выберите, в какой кабинет входите.'}
       </p>
@@ -117,7 +117,7 @@ function RoleCard({
   return (
     <Link
       to={to}
-      className="flex min-h-20 items-center gap-4 rounded-2xl border border-border bg-surface p-4 transition hover:border-navy-800/25 hover:bg-surface-muted active:bg-surface-subtle"
+      className="group flex min-h-20 cursor-pointer items-center gap-4 rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-0.5 hover:border-brand-green/30 hover:shadow-[var(--shadow-elevated)] active:scale-[0.99]"
     >
       <span
         className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${
@@ -335,7 +335,7 @@ function RoleAuthForm({ role, register }: { role: UserRole; register: boolean })
       {step === 'form' && (
         <form onSubmit={submitForm} aria-busy={submitting} noValidate className="flex flex-1 flex-col">
           <RoleBadge tone={tone} label={isCoach ? 'Тренер' : 'Родитель'} />
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-text">
+          <h1 className="mt-4 font-display text-2xl font-semibold tracking-tight text-text">
             {register ? (isCoach ? 'Регистрация тренера' : 'Регистрация родителя') : isCoach ? 'Вход тренера' : 'Вход родителя'}
           </h1>
           <p className="mt-2 text-sm leading-6 text-text-secondary">

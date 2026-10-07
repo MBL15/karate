@@ -1,6 +1,9 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useParentChild } from '../../context/ParentChildContext'
 import { IconCalendar, IconPlus, IconUser, IconUsers } from '../ui/Icons'
+
+const accentRed = '#ff4d4f'
 
 const imgHome = '/assets/parent/house.svg'
 const imgUser = '/assets/parent/user.svg'
@@ -29,6 +32,48 @@ type OnboardingIcon = 'home' | 'children' | 'events' | 'profile'
 
 const greenIconFilter =
   'invert(48%) sepia(79%) saturate(425%) hue-rotate(115deg) brightness(92%) contrast(89%)'
+
+function activeTabIndex(pathname: string, addOpen: boolean) {
+  if (addOpen) return 2
+  if (pathname.startsWith('/app/profile')) return 4
+  if (pathname.startsWith('/app/competition')) return 3
+  if (pathname.startsWith('/app/history')) return 1
+  if (pathname === '/app') return 0
+  return 0
+}
+
+function ActiveTabFrame({ index, pulse }: { index: number; pulse: number }) {
+  const pad = index === 0 ? 'py-1 pl-3 pr-1' : index === 4 ? 'py-1 pl-1 pr-3' : 'px-1 py-1'
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[5] grid grid-cols-5" aria-hidden>
+      <div className={`h-full min-h-0 ${pad}`} style={{ gridColumn: index + 1 }}>
+        <svg
+          className="block size-full overflow-visible"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <rect
+            key={`${index}-${pulse}`}
+            className="coach-tab-frame-stroke"
+            x="2.2"
+            y="2.2"
+            width="95.6"
+            height="95.6"
+            rx="16"
+            ry="16"
+            fill="#ffffff"
+            stroke={accentRed}
+            strokeWidth="2.75"
+            vectorEffect="nonScalingStroke"
+            pathLength={100}
+            strokeDasharray={100}
+            strokeDashoffset={100}
+          />
+        </svg>
+      </div>
+    </div>
+  )
+}
 
 function OnboardingIconGlyph({ kind, color, active }: { kind: OnboardingIcon; color: string; active?: boolean }) {
   const props = { size: 22, className: 'shrink-0', style: { color } as const }
@@ -84,7 +129,7 @@ function ParentTab({ tab }: { tab: Tab }) {
       to={tab.to}
       end={tab.end}
       className={({ isActive }) =>
-        `flex h-full w-full flex-col items-center justify-center gap-1.5 transition-colors ${
+        `relative z-10 flex h-full w-full flex-col items-center justify-center gap-1.5 transition-colors ${
           isActive ? 'text-brand-green' : 'text-text-muted'
         }`
       }
@@ -119,8 +164,15 @@ export function ParentMobileNav({
   always?: boolean
   variant?: 'default' | 'onboarding'
 }) {
-  const { setAddChildOpen } = useParentChild()
+  const { setAddChildOpen, addChildOpen } = useParentChild()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const activeIndex = activeTabIndex(pathname, addChildOpen)
+  const [framePulse, setFramePulse] = useState(0)
+
+  useEffect(() => {
+    setFramePulse((n) => n + 1)
+  }, [activeIndex])
 
   if (variant === 'onboarding') {
     return (
@@ -156,23 +208,27 @@ export function ParentMobileNav({
       aria-label="Разделы дневника"
     >
       <div className="relative mx-auto max-w-sm">
-        <div className="rounded-[2rem] border border-border/90 bg-surface px-1 py-2.5 shadow-[0_4px_24px_rgb(18_24_32_/_0.1)]">
-          <div className="grid min-h-[3.75rem] grid-cols-5 items-center">
-            <ParentTab tab={tabs[0]} />
-            <ParentTab tab={tabs[1]} />
-            <button
-              type="button"
-              onClick={() => setAddChildOpen(true)}
-              aria-label="Добавить ребёнка"
-              className="flex h-full w-full flex-col items-center justify-center gap-1.5 transition-transform active:scale-95"
-            >
-              <span className="flex size-9 items-center justify-center rounded-full bg-brand-green text-navy-950 shadow-[0_2px_8px_rgb(18_24_32_/_0.15)]">
-                <IconPlus size={20} />
-              </span>
-              <span className="text-[10px] font-medium leading-none text-text-muted">Добавить</span>
-            </button>
-            <ParentTab tab={tabs[2]} />
-            <ParentTab tab={tabs[3]} />
+        <div className="relative overflow-visible rounded-[2rem] border border-[#ebe6dc] bg-white px-0.5 pb-2.5 pt-1.5 shadow-[0_8px_28px_rgb(18_24_32_/_0.08)]">
+          <div className="relative min-h-[4.25rem]">
+            <ActiveTabFrame index={activeIndex} pulse={framePulse} />
+            <div className="relative z-10 grid h-full min-h-[4.25rem] grid-cols-5 items-center">
+              <ParentTab tab={tabs[0]} />
+              <ParentTab tab={tabs[1]} />
+              <button
+                type="button"
+                onClick={() => setAddChildOpen(true)}
+                aria-expanded={addChildOpen}
+                aria-label="Добавить ребёнка"
+                className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-1.5 transition-transform active:scale-95"
+              >
+                <span className="flex size-9 items-center justify-center rounded-full bg-brand-green text-navy-950 shadow-[0_2px_8px_rgb(18_24_32_/_0.15)]">
+                  <IconPlus size={20} />
+                </span>
+                <span className="text-[10px] font-medium leading-none text-text-muted">Добавить</span>
+              </button>
+              <ParentTab tab={tabs[2]} />
+              <ParentTab tab={tabs[3]} />
+            </div>
           </div>
         </div>
       </div>

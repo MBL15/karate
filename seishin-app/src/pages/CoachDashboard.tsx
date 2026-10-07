@@ -8,8 +8,6 @@ import { CoachError, CoachLoading } from '../components/coach/CoachScreenState'
 import { IconArrowRight, IconClipboard, IconTrophy, IconUsers } from '../components/ui/Icons'
 import { useAuth } from '../context/AuthContext'
 
-const avatar = '/assets/coach/avatar-coach.svg'
-
 type Range = 'groups' | 'today' | 'week'
 
 const tones = [
@@ -178,31 +176,32 @@ export function CoachDashboard() {
 
   return (
     <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-[max(1.5rem,var(--safe-top-effective))] lg:max-w-3xl lg:px-8 lg:pt-8">
-      <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[1.65rem] font-bold leading-tight tracking-tight text-text">
+      <header className="coach-mobile-hero flex items-start justify-between gap-4">
+        <div className="relative z-10 min-w-0">
+          <p className="font-display text-[1.65rem] leading-tight font-semibold tracking-tight text-white lg:text-text">
             {greeting(today)},
             <br />
             {firstName}
           </p>
           {dashboard?.joinCode && (
-            <p className="mt-2 font-mono text-[1.75rem] font-bold leading-none tracking-[0.28em] text-text">
+            <p className="mt-3 inline-flex items-center rounded-xl border border-[#f0d078]/45 bg-white/10 px-3 py-1.5 font-mono text-lg font-bold tracking-[0.28em] text-[#f6e7b0] lg:border-brand-green/30 lg:bg-brand-green-light lg:text-navy-950">
               <span className="sr-only">Код клуба </span>
               {dashboard.joinCode}
             </p>
           )}
-          <p className="mt-1 text-sm text-text-secondary">{dashboard?.clubName ?? 'Клуб'}</p>
+          <p className="mt-1 text-sm text-white/75 lg:text-text-secondary">{dashboard?.clubName ?? 'Клуб'}</p>
         </div>
-        <div className="relative">
+        <div className="relative z-10">
           <button
             type="button"
             aria-expanded={accountOpen}
             aria-haspopup="menu"
             aria-label="Аккаунт тренера"
             onClick={() => setAccountOpen((open) => !open)}
-            className="size-12 overflow-hidden rounded-full ring-2 ring-white shadow-[var(--shadow-card)]"
+            className="flex size-12 items-center justify-center overflow-hidden rounded-full bg-[linear-gradient(160deg,#f6e7b0,#c4961a)] font-display text-base font-semibold text-navy-950 shadow-[0_8px_18px_rgb(184_134_11_/_0.35)] ring-2 ring-white/80"
           >
-            <img src={avatar} alt="" className="size-full object-cover" />
+            <span className="sr-only">{user?.name}</span>
+            {firstName.slice(0, 1).toUpperCase()}
           </button>
           {accountOpen && (
             <div
@@ -217,7 +216,7 @@ export function CoachDashboard() {
         </div>
       </header>
 
-      <div className="mt-5 grid grid-cols-3 rounded-full bg-white p-1 shadow-[var(--shadow-card)]" role="tablist" aria-label="Период">
+      <div className="mt-5 grid grid-cols-3 rounded-full border border-white/80 bg-white p-1 shadow-[var(--shadow-card)]" role="tablist" aria-label="Период">
         {(
           [
             ['groups', 'Группы'],
@@ -231,8 +230,10 @@ export function CoachDashboard() {
             role="tab"
             aria-selected={range === id}
             onClick={() => setRange(id)}
-            className={`min-h-11 rounded-full text-sm font-semibold transition ${
-              range === id ? 'bg-[#f5c518] text-navy-950' : 'text-text-secondary hover:text-text'
+            className={`min-h-11 cursor-pointer rounded-full text-sm font-semibold transition duration-200 ${
+              range === id
+                ? 'bg-[#f0d078] text-navy-950 shadow-[0_6px_16px_rgb(184_134_11_/_0.28)]'
+                : 'text-text-secondary hover:text-text'
             }`}
           >
             {label}
@@ -259,7 +260,10 @@ export function CoachDashboard() {
           {range === 'groups' ? (
             <section className="mt-5 space-y-3" aria-label="Группы">
               {dashboard.groups.length === 0 ? (
-                <p className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                <p className="flex flex-col items-center gap-3 rounded-2xl border border-white/80 bg-white px-4 py-8 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-green-light text-[#a16207]">
+                    <IconUsers size={22} />
+                  </span>
                   Групп пока нет
                 </p>
               ) : (
@@ -267,7 +271,7 @@ export function CoachDashboard() {
                   <Link
                     key={group.id}
                     to={`/coach/students?group=${group.id}`}
-                    className="flex items-center gap-3 rounded-[1.25rem] bg-white px-4 py-4 shadow-[var(--shadow-card)] transition active:scale-[0.99]"
+                    className="panel flex items-center gap-3"
                   >
                     <span className="flex size-11 items-center justify-center rounded-2xl bg-[#dbe7fb] text-[#1d4e89]">
                       <IconUsers size={20} />
@@ -286,10 +290,13 @@ export function CoachDashboard() {
           ) : (
             <section className="mt-5" aria-label={range === 'today' ? 'Занятия сегодня' : 'Занятия недели'}>
               {range === 'today' && (
-                <h2 className="text-sm font-semibold text-text-secondary">{formatDay(todayIso)}</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{formatDay(todayIso)}</h2>
               )}
               {visibleClasses.length === 0 ? (
-                <p className="mt-3 rounded-2xl bg-white px-4 py-6 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                <p className="mt-3 flex flex-col items-center gap-3 rounded-2xl border border-white/80 bg-white px-4 py-8 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-green-light text-[#a16207]">
+                    <IconUsers size={22} />
+                  </span>
                   {range === 'today' ? 'Сегодня занятий нет' : 'На этой неделе занятий нет'}
                 </p>
               ) : (
@@ -297,7 +304,7 @@ export function CoachDashboard() {
                   {Object.keys(classesByDate).map((date) => (
                     <div key={date}>
                       {range === 'week' && (
-                        <h2 className="mb-3 text-sm font-semibold text-text-secondary">{formatDay(date)}</h2>
+                        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{formatDay(date)}</h2>
                       )}
                       <ul className="space-y-3">
                         {classesByDate[date].map((event, index) => {
@@ -316,7 +323,7 @@ export function CoachDashboard() {
                             <li key={classKey(event)}>
                               <Link
                                 to={attendanceLink(event)}
-                                className="block rounded-[1.25rem] bg-white px-4 py-4 shadow-[var(--shadow-card)] transition active:scale-[0.99]"
+                                className="panel block"
                               >
                                 <div className="flex items-start gap-3">
                                   <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${tone.tile}`}>
@@ -368,7 +375,7 @@ export function CoachDashboard() {
 
           <section className="mt-8" aria-labelledby="attention-title">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 id="attention-title" className="text-base font-bold text-text">
+              <h2 id="attention-title" className="font-display text-base font-semibold tracking-tight text-text">
                 Что требует внимания
               </h2>
               <Link to="/coach/attendance" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-text-secondary">
@@ -382,7 +389,7 @@ export function CoachDashboard() {
                   <button
                     type="button"
                     onClick={() => void sendReminders()}
-                    className="flex w-full items-center gap-3 rounded-[1.25rem] bg-white px-4 py-3 text-left shadow-[var(--shadow-card)] transition active:scale-[0.99]"
+                    className="panel flex w-full items-center gap-3 py-3 text-left"
                   >
                     <span className="flex size-10 items-center justify-center rounded-xl bg-[#fde8e8] text-[#d94b55]">
                       <IconClipboard size={18} />
@@ -398,7 +405,7 @@ export function CoachDashboard() {
                 <li>
                   <Link
                     to="/coach/attendance"
-                    className="flex items-center gap-3 rounded-[1.25rem] bg-white px-4 py-3 shadow-[var(--shadow-card)]"
+                    className="panel flex items-center gap-3 py-3"
                   >
                     <span className="flex size-10 items-center justify-center rounded-xl bg-[#fff4d6] text-[#b8860b]">
                       <IconUsers size={18} />
@@ -415,7 +422,7 @@ export function CoachDashboard() {
                 <li>
                   <Link
                     to="/coach/competitions"
-                    className="flex items-center gap-3 rounded-[1.25rem] bg-white px-4 py-3 shadow-[var(--shadow-card)]"
+                    className="panel flex items-center gap-3 py-3"
                   >
                     <span className="flex size-10 items-center justify-center rounded-xl bg-[#dbe7fb] text-[#1d4e89]">
                       <IconTrophy size={18} />
@@ -428,7 +435,7 @@ export function CoachDashboard() {
                 </li>
               )}
               {pendingPayments === 0 && unmarkedStudents === 0 && pendingRsvps === 0 && (
-                <li className="rounded-[1.25rem] bg-white px-4 py-4 text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                <li className="rounded-[1.25rem] border border-white/80 bg-white px-4 py-4 text-sm text-text-secondary shadow-[var(--shadow-card)]">
                   Сейчас всё спокойно
                 </li>
               )}

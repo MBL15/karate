@@ -17,7 +17,7 @@ export function CoachLayout() {
   const [beltSettingsOpen, setBeltSettingsOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-[#f6f4ef]">
+    <div className="coach-app-canvas min-h-screen">
       <SkipLink />
       <header className="sticky top-0 z-40 hidden border-b border-white/10 bg-navy-950 lg:block">
         <div className="flex h-16 items-center justify-between px-5 lg:px-8">
@@ -40,8 +40,8 @@ export function CoachLayout() {
         <main
           id="main-content"
           tabIndex={-1}
-          className={`flex-1 overflow-x-hidden overflow-y-auto bg-[#f6f4ef] pb-40 outline-none lg:pb-0 ${
-            isSecretPage ? 'bg-[#f5f4f1]' : ''
+          className={`flex-1 overflow-x-hidden overflow-y-auto pb-40 outline-none lg:pb-0 ${
+            isSecretPage ? 'bg-[#f5f4f1]' : 'coach-app-canvas'
           }`}
         >
           <div key={pathname} className="page-transition">

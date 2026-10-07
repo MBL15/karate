@@ -38,7 +38,7 @@ export function CoachSidebar({ onCreate }: { onCreate: () => void }) {
       <button
         type="button"
         onClick={onCreate}
-        className="mt-6 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#f5c518] px-3 py-2.5 text-sm font-bold text-navy-950 transition hover:brightness-95 active:scale-[0.99]"
+        className="btn-primary mt-6 w-full rounded-2xl"
       >
         <IconPlus size={16} />
         Создать

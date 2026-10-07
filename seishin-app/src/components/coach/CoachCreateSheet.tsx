@@ -70,9 +70,10 @@ export function CoachCreateSheet({
 
   return (
     <Dialog open={open} titleId="coach-create-title" onClose={onClose}>
-      <div className="rounded-[1.75rem] bg-white p-5 shadow-[var(--shadow-elevated)]">
+      <div className="relative overflow-hidden rounded-[1.75rem] bg-white p-5 shadow-[var(--shadow-elevated)]">
+        <div aria-hidden className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[#f0d078] to-transparent" />
         <div className="flex items-center justify-between gap-3">
-          <h2 id="coach-create-title" className="text-xl font-bold tracking-tight text-text">
+          <h2 id="coach-create-title" className="font-display text-xl font-semibold tracking-tight text-text">
             Создать
           </h2>
           <button

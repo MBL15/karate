@@ -49,8 +49,12 @@ export function ParentHero({
   return (
 
     <div
-      className={`hero-app rounded-b-[1.75rem] px-5 pt-5 ${compact ? 'pb-8' : 'pb-10'}`}
+      className={`hero-app relative overflow-hidden rounded-b-[1.75rem] px-5 pt-5 shadow-[0_18px_40px_rgb(18_24_32_/_0.16)] ${compact ? 'pb-8' : 'pb-10'}`}
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-green/80 to-transparent"
+      />
       <div className="relative z-10">
 
         {childSwitcher && <ParentChildHeroBar right={switcherRight} />}
@@ -65,7 +69,7 @@ export function ParentHero({
 
             )}
 
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">{title}</h1>
+            <h1 className="mt-1 font-display text-xl font-semibold tracking-tight text-white sm:text-2xl">{title}</h1>
 
             {subtitle && <p className="mt-1 text-sm text-text-on-dark">{subtitle}</p>}
 

@@ -35,14 +35,18 @@ export function LandingPage() {
       <section className="hero-parent relative overflow-hidden px-5 py-16 pb-20 text-white md:py-24 md:pb-28">
         <div className="hero-orb hero-orb-green" aria-hidden />
         <div className="hero-orb hero-orb-blue" aria-hidden />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-transparent via-brand-green to-transparent"
+        />
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
           <div className="fade-in-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-brand-green-light">
-              <span className="size-2 rounded-full bg-brand-green" />
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-brand-green-light">
+              <span className="size-2 rounded-full bg-brand-green shadow-[0_0_12px_rgb(232_196_92_/_0.8)]" />
               Karate Hub
             </span>
-            <h1 className="mt-6 text-4xl font-extrabold leading-[1.1] tracking-tight md:text-5xl lg:text-[3.25rem]">
+            <h1 className="mt-6 font-display text-4xl leading-[1.08] font-semibold tracking-tight md:text-5xl lg:text-[3.35rem]">
               Прогресс ребёнка — наглядно и просто
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-relaxed text-text-on-dark">
@@ -70,7 +74,11 @@ export function LandingPage() {
           </div>
 
           <div className="fade-in-up stagger-2 relative mx-auto w-full max-w-md">
-            <div className="card-elevated overflow-hidden">
+            <div
+              aria-hidden
+              className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-brand-green/20 blur-2xl"
+            />
+            <div className="card-elevated overflow-hidden ring-1 ring-white/10">
               <div className="bg-navy-900 px-6 py-8">
                 <p className="text-center text-xs font-semibold uppercase tracking-wider text-text-on-dark">
                   Демо дневника
@@ -105,8 +113,8 @@ export function LandingPage() {
       <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16 lg:px-8">
         <div className="fade-in-up -mt-8 rounded-[2rem] border border-border bg-surface px-5 py-12 shadow-[var(--shadow-elevated)] sm:px-10 md:py-14">
           <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand-green">Возможности</p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-text">Всё для каратэ-клуба</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-green">Возможности</p>
+            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-text">Всё для каратэ-клуба</h2>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {features.map((f, i) => (
@@ -133,7 +141,7 @@ export function LandingPage() {
       <section className="px-5 pb-20 lg:px-8">
         <div className="hero-parent fade-in-up relative mx-auto max-w-6xl overflow-hidden rounded-3xl px-8 py-14 text-center text-white md:px-16">
           <div className="hero-orb hero-orb-green right-0 left-auto scale-75" aria-hidden />
-          <h2 className="relative text-2xl font-bold text-white md:text-3xl">Попробуйте демо прямо сейчас</h2>
+          <h2 className="relative font-display text-2xl font-semibold text-white md:text-3xl">Попробуйте демо прямо сейчас</h2>
           <p className="relative mx-auto mt-3 max-w-xl text-text-on-dark">
             Родитель: +79004445566 · Тренер: +79001112233 · Код: 123456
           </p>

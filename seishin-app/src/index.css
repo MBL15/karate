@@ -1,8 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --font-display: "Unbounded", "Manrope", system-ui, sans-serif;
 
   /* Unified palette — gold accent + warm navy (ref: trainer app mockup) */
   --color-navy-950: #121820;
@@ -47,9 +48,10 @@
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
 
-  --shadow-card: 0 1px 3px rgb(18 24 32 / 0.05), 0 6px 20px rgb(18 24 32 / 0.07);
-  --shadow-elevated: 0 4px 16px rgb(18 24 32 / 0.08), 0 20px 40px rgb(18 24 32 / 0.1);
-  --shadow-nav: 0 -4px 20px rgb(18 24 32 / 0.06);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 1px 2px rgb(18 24 32 / 0.04), 0 10px 28px rgb(18 24 32 / 0.07);
+  --shadow-elevated: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 12px 32px rgb(18 24 32 / 0.1), 0 28px 60px rgb(18 24 32 / 0.12);
+  --shadow-nav: 0 -8px 28px rgb(18 24 32 / 0.08);
+  --shadow-gold: 0 8px 22px rgb(184 134 11 / 0.28);
 
   --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -107,6 +109,10 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   background-color: var(--color-page);
+  background-image:
+    radial-gradient(980px 460px at -8% -10%, rgb(184 134 11 / 0.1), transparent 58%),
+    radial-gradient(760px 380px at 110% -6%, rgb(26 35 50 / 0.06), transparent 52%);
+  background-attachment: fixed;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -154,38 +160,49 @@ body {
 @layer components {
   .card {
     @apply rounded-2xl border border-border bg-[#faf9f6] shadow-[var(--shadow-card)];
+    background-image: linear-gradient(180deg, #fffdf8 0%, #faf9f6 100%);
   }
 
   .card-elevated {
     @apply rounded-2xl border border-border bg-surface shadow-[var(--shadow-elevated)];
+    background-image: linear-gradient(180deg, #ffffff 0%, #f7f4ee 100%);
   }
 
   .card-hover {
-    @apply rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-green/30 hover:shadow-[var(--shadow-elevated)];
+    @apply cursor-pointer rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-green/35 hover:shadow-[var(--shadow-elevated)];
+    background-image: linear-gradient(180deg, #fffdf8 0%, #faf9f6 100%);
+  }
+
+  .panel {
+    @apply cursor-pointer rounded-[1.25rem] border border-white/80 bg-white px-4 py-4 shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-0.5 hover:border-brand-green/25 hover:shadow-[var(--shadow-elevated)] active:scale-[0.99];
   }
 
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-brand-green text-navy-950 hover:bg-brand-green-hover active:scale-[0.98] shadow-sm;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-navy-950 transition-all duration-200 hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    background-image: linear-gradient(180deg, #f0d078 0%, #c4961a 100%);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.45) inset, var(--shadow-gold);
   }
 
   .btn-coach {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 bg-navy-900 text-white hover:bg-navy-950 active:scale-[0.98] shadow-sm;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    background-image: linear-gradient(180deg, #2c3b52 0%, #121820 100%);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.12) inset, 0 10px 22px rgb(18 24 32 / 0.22);
   }
 
   .btn-secondary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 border border-border bg-surface text-text hover:bg-surface-muted active:scale-[0.98];
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-text transition-all duration-200 hover:border-navy-800/20 hover:bg-surface-muted active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-on-dark {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 border border-white/25 bg-white/10 text-white hover:bg-white/18 active:scale-[0.98];
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-200 hover:bg-white/18 active:scale-[0.98];
   }
 
   .btn-ghost {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 text-text-secondary hover:bg-surface-subtle hover:text-text;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-text-secondary transition-all duration-200 hover:bg-surface-subtle hover:text-text disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .input {
@@ -249,27 +266,112 @@ body {
   }
 
   .section-title {
-    @apply text-lg font-bold text-text;
+    @apply font-display text-lg font-semibold tracking-tight text-text;
+  }
+
+  .display {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
   }
 
   .gradient-hero {
-    background: linear-gradient(155deg, var(--color-navy-950) 0%, var(--color-navy-900) 55%, var(--color-navy-800) 100%);
+    background-color: #121820;
+    background-image:
+      radial-gradient(ellipse 72% 58% at 100% -8%, rgb(232 196 92 / 0.28), transparent 52%),
+      radial-gradient(ellipse 42% 46% at -6% 108%, rgb(47 90 160 / 0.28), transparent 50%),
+      linear-gradient(165deg, #0c1118 0%, #1a2332 54%, #2a384c 100%);
   }
 
   .gradient-app-sidebar {
-    background: linear-gradient(180deg, var(--color-navy-950) 0%, var(--color-navy-900) 100%);
+    background:
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgb(232 196 92 / 0.16), transparent 55%),
+      linear-gradient(180deg, var(--color-navy-950) 0%, var(--color-navy-900) 100%);
   }
 
   .gradient-coach-sidebar {
-    background: linear-gradient(180deg, var(--color-navy-950) 0%, var(--color-navy-900) 100%);
+    background:
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgb(232 196 92 / 0.16), transparent 55%),
+      linear-gradient(180deg, var(--color-navy-950) 0%, var(--color-navy-900) 100%);
   }
 
   .hero-parent {
-    background: linear-gradient(155deg, var(--color-navy-950) 0%, var(--color-navy-900) 55%, var(--color-navy-800) 100%);
+    background-color: #121820;
+    background-image:
+      radial-gradient(ellipse 72% 58% at 100% -8%, rgb(232 196 92 / 0.28), transparent 52%),
+      radial-gradient(ellipse 42% 46% at -6% 108%, rgb(47 90 160 / 0.28), transparent 50%),
+      linear-gradient(165deg, #0c1118 0%, #1a2332 54%, #2a384c 100%);
   }
 
   .hero-app {
-    background: linear-gradient(180deg, var(--color-navy-950) 0%, var(--color-navy-900) 100%);
+    background-color: #121820;
+    background-image:
+      radial-gradient(ellipse 80% 70% at 100% 0%, rgb(232 196 92 / 0.22), transparent 48%),
+      radial-gradient(ellipse 50% 40% at 0% 100%, rgb(47 90 160 / 0.22), transparent 52%),
+      linear-gradient(180deg, #0e141c 0%, #1a2332 100%);
+  }
+
+  .coach-app-canvas {
+    background-color: #f6f4ef;
+    background-image: radial-gradient(520px 240px at 50% -80px, rgb(184 134 11 / 0.18), transparent 72%);
+  }
+
+  .coach-mobile-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.75rem;
+    padding: 1.25rem;
+    color: #fff;
+    background-color: #121820;
+    background-image:
+      radial-gradient(ellipse 78% 70% at 100% 0%, rgb(232 196 92 / 0.32), transparent 52%),
+      radial-gradient(ellipse 46% 50% at 0% 110%, rgb(47 90 160 / 0.32), transparent 54%),
+      linear-gradient(165deg, #0c1118 0%, #1a2332 58%, #2a384c 100%);
+    box-shadow: 0 16px 36px rgb(18 24 32 / 0.16);
+  }
+
+  .coach-mobile-hero::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 1.5rem;
+    left: 1.5rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(240 208 120 / 0.9), transparent);
+    pointer-events: none;
+  }
+
+  .coach-mobile-section {
+    border-radius: 1.5rem;
+    border: 1px solid rgb(255 255 255 / 0.85);
+    background-image: linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
+    padding: 1rem 1rem 0.85rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  @media (min-width: 1024px) {
+    .coach-app-canvas {
+      background-image: none;
+    }
+
+    .coach-mobile-hero {
+      overflow: visible;
+      border-radius: 0;
+      padding: 0;
+      color: inherit;
+      background: none;
+      box-shadow: none;
+    }
+
+    .coach-mobile-hero::before {
+      display: none;
+    }
+
+    .coach-mobile-section {
+      border: 0;
+      background: none;
+      padding: 0;
+      box-shadow: none;
+    }
   }
 
   .hero-orb {
@@ -283,9 +385,9 @@ body {
   .hero-orb-green {
     top: -3rem;
     right: -3rem;
-    width: 14rem;
-    height: 14rem;
-    background: rgb(184 134 11 / 0.18);
+    width: 16rem;
+    height: 16rem;
+    background: rgb(232 196 92 / 0.32);
   }
 
   .hero-orb-blue {

@@ -56,7 +56,7 @@ function ParentAppLayoutInner() {
           id="main-content"
           tabIndex={-1}
           className={`flex-1 overflow-x-hidden overflow-y-auto outline-none lg:pb-0 ${
-            emptyParent ? 'bg-white pb-[5.75rem]' : isSecretPage ? 'bg-[#f5f4f1] pb-[5.75rem]' : 'bg-page pb-[5.75rem]'
+            emptyParent ? 'bg-white pb-[5.75rem]' : isSecretPage ? 'bg-[#f5f4f1] pb-[6.75rem]' : 'bg-page pb-[6.75rem]'
           }`}
         >
           <div key={pathname} className="page-transition">

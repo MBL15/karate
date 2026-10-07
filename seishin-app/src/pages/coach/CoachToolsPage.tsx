@@ -272,7 +272,7 @@ export function CoachToolsPage() {
   if (panel === 'timer') return <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-6 lg:max-w-3xl lg:px-8 lg:pt-8"><TimerTool onBack={() => setPanel(null)} /></div>
   if (panel === 'fitness' || panel === 'kata') {
     return (
-      <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-6 lg:max-w-3xl lg:px-8 lg:pt-8">
+      <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-[max(1.25rem,var(--safe-top-effective))] lg:max-w-3xl lg:px-8 lg:pt-8">
         <SoonTool
           title={panel === 'fitness' ? 'Конструктор подготовки' : 'Библиотека ката'}
           text="Раздел уже на месте в кабинете. Наполнение — комплексы, видео и чек-листы — появится следующим обновлением."
@@ -284,7 +284,7 @@ export function CoachToolsPage() {
 
   if (panel === 'analytics' || panel === 'club' || panel === 'access') {
     return (
-      <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-6 lg:max-w-3xl lg:px-8 lg:pt-8">
+      <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-[max(1.25rem,var(--safe-top-effective))] lg:max-w-3xl lg:px-8 lg:pt-8">
         <button type="button" onClick={() => setPanel(null)} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-text-secondary">
           <IconArrowLeft size={16} />
           Инструменты
@@ -347,13 +347,15 @@ export function CoachToolsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-6 lg:max-w-3xl lg:px-8 lg:pt-8">
-      <h1 className="text-[1.65rem] font-bold leading-tight tracking-tight text-text">Инструменты</h1>
-      <p className="mt-1 text-sm text-text-secondary">Помощник тренера в повседневной работе</p>
+    <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-[max(1.25rem,var(--safe-top-effective))] lg:max-w-3xl lg:px-8 lg:pt-8">
+      <header className="coach-mobile-section">
+        <h1 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-text">Инструменты</h1>
+        <p className="mt-1 text-sm text-text-secondary">Помощник тренера в повседневной работе</p>
+      </header>
       <div className="mt-5 grid grid-cols-2 gap-3">
         {tools.map((tool) => {
           const Icon = tool.icon
-          const className = `flex flex-col items-start rounded-[1.25rem] bg-white p-4 text-left shadow-[var(--shadow-card)] transition active:scale-[0.99] ${
+          const className = `flex cursor-pointer flex-col items-start rounded-[1.25rem] border border-white/80 bg-white p-4 text-left shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-0.5 hover:border-brand-green/30 hover:shadow-[var(--shadow-elevated)] active:scale-[0.99] ${
             tool.wide ? 'col-span-2' : ''
           }`
           const body = (

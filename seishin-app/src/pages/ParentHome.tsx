@@ -10,7 +10,7 @@ import { ParentPageShell } from '../components/parent/ParentPageShell'
 import { ParentError, ParentLoading } from '../components/parent/ParentScreenState'
 import { BeltProgressRing } from '../components/ui/BeltProgressRing'
 import { DashboardCard } from '../components/ui/DashboardCard'
-import { IconArrowRight, IconBell, IconCalendar, IconCheck, IconTrophy } from '../components/ui/Icons'
+import { IconArrowRight, IconAward, IconBell, IconCalendar, IconCheck, IconFolder, IconTrophy, IconUser } from '../components/ui/Icons'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { QuickActions } from '../components/ui/QuickActions'
 import { SectionHeader } from '../components/ui/SectionHeader'
@@ -18,11 +18,6 @@ import { useAuth } from '../context/AuthContext'
 import { useParentChild } from '../context/ParentChildContext'
 import { attendanceDayClass, attendanceStatusLabel, formatDate, paymentStatusUi } from '../utils/format'
 import { beltNextDisplayName, beltProgressValue, beltShowsPercent } from '../utils/beltProgress'
-
-const imgUser = '/assets/parent/user.svg'
-const imgAward = '/assets/parent/award.svg'
-const imgFolder = '/assets/parent/folder.svg'
-const imgTrophy = '/assets/parent/trophy.svg'
 
 function BeltProgressPanel({ home }: { home: ParentChildHome }) {
   const showPct = beltShowsPercent(home)
@@ -196,10 +191,10 @@ export function ParentHome() {
     payment?.status === 'OVERDUE' ? 'red' : payment?.status === 'PENDING' ? 'amber' : 'green'
 
   const quickActions = [
-    { to: '/app/profile', label: 'Профиль', icon: imgUser },
-    { to: '/app/achievements', label: 'Награды', icon: imgAward },
-    { to: '/app/competition', label: 'Турниры', icon: imgTrophy },
-    { to: '/app/history', label: 'Архив', icon: imgFolder },
+    { to: '/app/profile', label: 'Профиль', icon: IconUser, tone: 'navy' as const },
+    { to: '/app/achievements', label: 'Награды', icon: IconAward, tone: 'gold' as const },
+    { to: '/app/competition', label: 'Турниры', icon: IconTrophy, tone: 'blue' as const },
+    { to: '/app/history', label: 'Архив', icon: IconFolder, tone: 'ink' as const },
   ]
 
   const paymentLabel = payment
@@ -224,11 +219,15 @@ export function ParentHome() {
       title="Дневник"
       subtitle={subtitle}
       hero={
-        <div className="hero-app rounded-b-[1.75rem] px-5 pb-8 pt-5">
+        <div className="hero-app relative overflow-hidden rounded-b-[1.75rem] px-5 pb-8 pt-5 shadow-[0_18px_40px_rgb(18_24_32_/_0.18)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-green/80 to-transparent"
+          />
           <div className="relative z-10">
             <div className="mb-5 min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Karate Hub</p>
-              <h2 className="mt-2 text-2xl font-extrabold leading-tight text-white">
+              <h2 className="mt-2 font-display text-2xl leading-tight font-semibold text-white">
                 {user?.name.split(' ')[0] ?? 'Родитель'}
               </h2>
               <p className="mt-1 text-sm leading-snug text-white/70">{subtitle}</p>

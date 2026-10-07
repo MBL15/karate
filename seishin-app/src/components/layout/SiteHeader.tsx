@@ -10,7 +10,7 @@ const links = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-surface/98 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-white/50 bg-surface/75 shadow-[0_8px_30px_rgb(18_24_32_/_0.04)] backdrop-blur-xl">
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link to="/" aria-label="Karate Hub, на главную">

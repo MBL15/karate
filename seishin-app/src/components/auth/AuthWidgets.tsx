@@ -26,7 +26,7 @@ export function AuthShell({
         <div aria-hidden className="pointer-events-none absolute bottom-16 -left-20 size-56 rounded-full border border-white/10" />
         <BrandMark variant="parent" size="lg" showLabel />
         <div className="relative max-w-md">
-          <p className="text-3xl font-bold tracking-tight">{heroTitle}</p>
+          <p className="font-display text-3xl leading-tight font-semibold tracking-tight">{heroTitle}</p>
           <p className="mt-3 text-base leading-7 text-text-on-dark">{heroLead}</p>
           <ul className="mt-8 space-y-3">
             {points.map((point) => (

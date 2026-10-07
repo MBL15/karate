@@ -27,11 +27,12 @@ function activeTabIndex(pathname: string, createOpen: boolean) {
 }
 
 function ActiveTabFrame({ index, pulse }: { index: number; pulse: number }) {
+  const pad = index === 0 ? 'py-1 pl-3 pr-1' : index === 4 ? 'py-1 pl-1 pr-3' : 'px-1 py-1'
   return (
     <div className="pointer-events-none absolute inset-0 z-[5] grid grid-cols-5" aria-hidden>
-      <div className="relative px-1 py-0.5" style={{ gridColumn: index + 1 }}>
+      <div className={`h-full min-h-0 ${pad}`} style={{ gridColumn: index + 1 }}>
         <svg
-          className="absolute inset-0 size-full overflow-visible"
+          className="block size-full overflow-visible"
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
         >

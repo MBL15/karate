@@ -29,7 +29,7 @@ export function BrandMark({ variant = 'site', size = 'md', showLabel = false }: 
       </span>
       {showLabel && (
         <div className="leading-tight">
-          <p className={`text-base font-bold ${onDark ? 'text-white' : 'text-text'}`}>Karate Hub</p>
+          <p className={`font-display text-base font-semibold tracking-tight ${onDark ? 'text-white' : 'text-text'}`}>Karate Hub</p>
           <p
             className={`text-[10px] font-medium uppercase tracking-wider ${onDark ? 'text-text-on-dark' : 'text-text-secondary'}`}
           >
