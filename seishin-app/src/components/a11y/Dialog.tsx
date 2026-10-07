@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 type DialogProps = {
   open: boolean
@@ -54,8 +55,8 @@ export function Dialog({ open, titleId, descriptionId, onClose, children }: Dial
 
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-navy-950/60" onClick={() => onCloseRef.current()} />
       <div
         ref={panelRef}
@@ -67,6 +68,7 @@ export function Dialog({ open, titleId, descriptionId, onClose, children }: Dial
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

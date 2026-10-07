@@ -7,11 +7,6 @@ import { AuthBack, AuthButton, AuthField, AuthShell, FieldIcon } from '../compon
 import { IconAward, IconCalendar, IconUser, IconUsers } from '../components/ui/Icons'
 import { useAuth } from '../context/AuthContext'
 
-const demoAccounts = {
-  COACH: { login: 'coach', password: 'coach123', name: 'Алексей Орлов' },
-  PARENT: { login: 'parent', password: 'parent123', name: 'Родитель Соколов' },
-}
-
 const karateStyles = ['Wado-Ryu', 'Shotokan', 'Goju-Ryu', 'Shito-Ryu', 'Kyokushin']
 
 const loginPattern = /^[a-zA-Z][a-zA-Z0-9._-]{2,31}$/
@@ -142,7 +137,6 @@ function RoleCard({
 function RoleAuthForm({ role, register }: { role: UserRole; register: boolean }) {
   const isCoach = role === 'COACH'
   const tone: Tone = isCoach ? 'coach' : 'parent'
-  const demo = demoAccounts[role]
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [clubName, setClubName] = useState('')
@@ -300,14 +294,6 @@ function RoleAuthForm({ role, register }: { role: UserRole; register: boolean })
     }
   }
 
-  const fillDemo = () => {
-    setLoginName(demo.login)
-    setPassword(demo.password)
-    setServerError('')
-    setAttempted(false)
-    setTouched((current) => ({ ...current, login: true, password: true }))
-  }
-
   const clubLabel = clubName.trim() || 'Karate Hub'
   const hero = register
     ? isCoach
@@ -409,7 +395,7 @@ function RoleAuthForm({ role, register }: { role: UserRole; register: boolean })
               onBlur={() => mark('login')}
               error={visibleAccount('login')}
               hint="Латиница, от 3 символов. Можно цифры, точку, дефис и _."
-              placeholder={demo.login}
+              placeholder="ivanov"
               autoComplete="username"
               autoCapitalize="none"
               spellCheck={false}
@@ -473,11 +459,6 @@ function RoleAuthForm({ role, register }: { role: UserRole; register: boolean })
             <AuthButton tone={tone} type="submit" disabled={submitting}>
               {submitting ? (register ? 'Создаём аккаунт…' : 'Входим…') : register ? 'Продолжить' : 'Войти'}
             </AuthButton>
-            {!register && (
-              <button type="button" onClick={fillDemo} className="btn-secondary mt-3 w-full">
-                Заполнить демо: {demo.login}
-              </button>
-            )}
             <p className="mt-4 text-center text-sm leading-6 text-text-secondary">
               {register ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}
               <Link

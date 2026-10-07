@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { parentApi } from '../api/parent'
 import type { HistoryEntry, NextTraining, ParentChildHome } from '../api/types'
 import { ApiError } from '../api/client'
+import { ParentAlertsSheet } from '../components/parent/ParentAlertsSheet'
 import { ParentChildHeroBar } from '../components/parent/ParentChildHeroBar'
 import { ParentOnboarding } from '../components/parent/ParentOnboarding'
 import { ParentPageShell } from '../components/parent/ParentPageShell'
@@ -159,6 +160,7 @@ export function ParentHome() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [alertsOpen, setAlertsOpen] = useState(false)
 
   const loadHome = useCallback(() => {
     if (!selectedChildId) {
@@ -184,7 +186,8 @@ export function ParentHome() {
 
   const competition = home?.upcomingCompetitions[0]
   const payment = home?.recentPayments[0]
-  const hasAlert = Boolean(competition) || Boolean(payment && payment.status !== 'PAID')
+  const unpaid = home?.recentPayments.filter((item) => item.status !== 'PAID') ?? []
+  const hasAlert = Boolean(home?.nextTraining) || (home?.upcomingCompetitions.length ?? 0) > 0 || unpaid.length > 0
   const subtitle = selectedChild
     ? `${selectedChild.firstName} · ${selectedChild.age} лет · ${selectedChild.beltName} пояс`
     : 'Выберите ребёнка в боковой панели'
@@ -233,12 +236,20 @@ export function ParentHome() {
 
             <ParentChildHeroBar
               right={
-                <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/8 text-text-on-dark">
+                <button
+                  type="button"
+                  aria-label={hasAlert ? 'Уведомления, есть новые' : 'Уведомления'}
+                  aria-expanded={alertsOpen}
+                  aria-haspopup="dialog"
+                  disabled={!home}
+                  onClick={() => setAlertsOpen(true)}
+                  className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/8 text-text-on-dark disabled:opacity-60"
+                >
                   <IconBell size={20} />
                   {hasAlert && (
                     <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full border-2 border-navy-950 bg-warning" />
                   )}
-                </span>
+                </button>
               }
             />
 
@@ -435,6 +446,13 @@ export function ParentHome() {
           )}
         </>
       )}
+      <ParentAlertsSheet
+        open={alertsOpen}
+        childId={selectedChildId}
+        schedule={home?.nextTraining ?? null}
+        competitions={home?.upcomingCompetitions ?? []}
+        onClose={() => setAlertsOpen(false)}
+      />
     </ParentPageShell>
   )
 }
