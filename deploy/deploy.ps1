@@ -1,8 +1,8 @@
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSScriptRoot
-$Key = "$env:USERPROFILE\Downloads\privatekey-1131818.pem"
-$Host_ = "ubuntu@195.209.220.227"
+$Key = "$env:USERPROFILE\Downloads\privatekey-1147315.pem"
+$Host_ = "ubuntu@195.209.221.13"
 $Jar = Join-Path $Root "seishin-backend\build\libs\karate-hub-0.0.1-SNAPSHOT.jar"
 
 if (-not (Test-Path $Jar)) {
@@ -23,7 +23,7 @@ scp @scp (Join-Path $PSScriptRoot "seishin.service") "${Host_}:/tmp/seishin.serv
 scp @scp (Join-Path $PSScriptRoot "nginx-seishin.conf") "${Host_}:/tmp/nginx-seishin.conf"
 
 Write-Host "Installing on server..."
-ssh @ssh @"
+$remote = @"
 set -e
 sudo apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openjdk-21-jre-headless nginx
@@ -42,5 +42,6 @@ sudo nginx -t
 sudo systemctl restart nginx
 sudo systemctl status seishin --no-pager -l | head -20
 "@
+ssh @ssh ($remote -replace "`r`n", "`n")
 
-Write-Host "Done. Open http://195.209.220.227"
+Write-Host "Done. Open http://195.209.221.13"
