@@ -6,6 +6,7 @@ import com.seishin.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,7 @@ public class DataSeeder implements CommandLineRunner {
     private final ChatGroupRepository chatGroupRepository;
     private final ChatGroupMemberRepository chatGroupMemberRepository;
     private final ChatGroupMessageRepository chatGroupMessageRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -52,6 +54,8 @@ public class DataSeeder implements CommandLineRunner {
         Club club = clubRepository.save(Club.builder().name("Karate Hub").build());
 
         User coach = userRepository.save(User.builder()
+                .login("coach")
+                .passwordHash(passwordEncoder.encode("coach123"))
                 .phone("+79001112233")
                 .role(Role.COACH)
                 .name("Алексей Орлов")
@@ -59,12 +63,17 @@ public class DataSeeder implements CommandLineRunner {
                 .build());
 
         User parent = userRepository.save(User.builder()
+                .login("parent")
+                .passwordHash(passwordEncoder.encode("parent123"))
                 .phone("+79004445566")
                 .role(Role.PARENT)
                 .name("Родитель Соколов")
                 .build());
 
-        BeltLevel white = beltLevelRepository.save(BeltLevel.builder().club(club).name("Белый").color("#FFFFFF").sortOrder(1).build());
+        Instant beltSince = Instant.now().minus(90, ChronoUnit.DAYS);
+
+        BeltLevel white = beltLevelRepository.save(BeltLevel.builder()
+                .club(club).name("Белый").color("#FFFFFF").sortOrder(1).sessionsRequired(24).build());
         beltLevelRepository.save(BeltLevel.builder().club(club).name("Жёлтый").color("#FFD700").sortOrder(2).build());
         beltLevelRepository.save(BeltLevel.builder().club(club).name("Оранжевый").color("#FF8C00").sortOrder(3).build());
         beltLevelRepository.save(BeltLevel.builder().club(club).name("Зелёный").color("#228B22").sortOrder(4).build());
@@ -75,6 +84,7 @@ public class DataSeeder implements CommandLineRunner {
                 .lastName("Соколов")
                 .birthDate(LocalDate.of(2017, 3, 15))
                 .beltLevel(white)
+                .beltAssignedAt(beltSince)
                 .progressPercent(72.0)
                 .coachRecommendation("Готов к экзамену на жёлтый пояс")
                 .guest(false)
@@ -86,6 +96,7 @@ public class DataSeeder implements CommandLineRunner {
                 .lastName("Соколова")
                 .birthDate(LocalDate.of(2020, 7, 8))
                 .beltLevel(white)
+                .beltAssignedAt(beltSince)
                 .progressPercent(35.0)
                 .guest(false)
                 .build());

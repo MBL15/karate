@@ -36,6 +36,9 @@ public class ParentService {
     private final BeltLevelRepository beltLevelRepository;
     private final UserRepository userRepository;
     private final InviteCodeRepository inviteCodeRepository;
+    private final ClubRepository clubRepository;
+    private final BeltProgressService beltProgressService;
+    private final TrainingIntentService trainingIntentService;
 
     public List<StudentSummaryDto> listChildren(UserPrincipal parent) {
         return parentAccessService.linkedChildren(parent.getId()).stream()
@@ -58,6 +61,7 @@ public class ParentService {
                 .lastName(dto.getLastName().trim())
                 .birthDate(dto.getBirthDate())
                 .beltLevel(belt)
+                .beltAssignedAt(Instant.now())
                 .guest(false)
                 .progressPercent(0)
                 .build());
@@ -78,7 +82,15 @@ public class ParentService {
         if (inviteCode == null || inviteCode.isBlank()) {
             throw new BadRequestException("Укажите код приглашения от тренера");
         }
-        InviteCode invite = inviteCodeRepository.findByCodeAndActiveTrue(inviteCode.trim())
+        String code = inviteCode.trim();
+        if (!code.matches("\\d{6}")) {
+            throw new BadRequestException("Код — 6 цифр");
+        }
+        Club byJoinCode = clubRepository.findByJoinCode(code).orElse(null);
+        if (byJoinCode != null) {
+            return byJoinCode;
+        }
+        InviteCode invite = inviteCodeRepository.findByCodeAndActiveTrue(code)
                 .orElseThrow(() -> new BadRequestException("Неверный или использованный код"));
         if (invite.getExpiresAt().isBefore(Instant.now())) {
             throw new BadRequestException("Код приглашения истёк");
@@ -110,12 +122,25 @@ public class ParentService {
                 .map(this::toPaymentSummary)
                 .toList();
         BeltLevel belt = student.getBeltLevel();
+        var beltProgress = beltProgressService.buildProgressView(student);
+        var nextTraining = trainingIntentService.findNextTraining(student)
+                .map(next -> trainingIntentService.withIntent(student, next))
+                .orElse(null);
         return ParentChildHomeDto.builder()
                 .studentId(studentId)
                 .fullName(student.getFirstName() + " " + student.getLastName())
                 .age(AgeCalculator.age(student.getBirthDate()))
                 .beltName(belt != null ? belt.getName() : null)
-                .progressPercent(student.getProgressPercent())
+                .beltColor(belt != null ? belt.getColor() : null)
+                .progressPercent(beltProgress.getProgressPercent())
+                .beltAssignmentMode(beltProgress.getBeltAssignmentMode())
+                .progressLabel(beltProgress.getProgressLabel())
+                .nextBeltName(beltProgress.getNextBeltName())
+                .nextBeltColor(beltProgress.getNextBeltColor())
+                .sessionsCompleted(beltProgress.getSessionsCompleted())
+                .sessionsRequired(beltProgress.getSessionsRequired())
+                .maxRank(beltProgress.isMaxRank())
+                .nextTraining(nextTraining)
                 .upcomingCompetitions(competitions)
                 .recentPayments(payments)
                 .build();
@@ -124,6 +149,7 @@ public class ParentService {
     public ParentChildProfileDto getChildProfile(UserPrincipal parent, Long studentId) {
         Student student = parentAccessService.requireLinkedChild(parent, studentId);
         BeltLevel belt = student.getBeltLevel();
+        var beltProgress = beltProgressService.buildProgressView(student);
         return ParentChildProfileDto.builder()
                 .studentId(studentId)
                 .firstName(student.getFirstName())
@@ -132,7 +158,14 @@ public class ParentService {
                 .age(AgeCalculator.age(student.getBirthDate()))
                 .beltName(belt != null ? belt.getName() : null)
                 .beltColor(belt != null ? belt.getColor() : null)
-                .progressPercent(student.getProgressPercent())
+                .progressPercent(beltProgress.getProgressPercent())
+                .beltAssignmentMode(beltProgress.getBeltAssignmentMode())
+                .progressLabel(beltProgress.getProgressLabel())
+                .nextBeltName(beltProgress.getNextBeltName())
+                .nextBeltColor(beltProgress.getNextBeltColor())
+                .sessionsCompleted(beltProgress.getSessionsCompleted())
+                .sessionsRequired(beltProgress.getSessionsRequired())
+                .maxRank(beltProgress.isMaxRank())
                 .coachRecommendation(student.getCoachRecommendation())
                 .clubName(student.getClub().getName())
                 .build();

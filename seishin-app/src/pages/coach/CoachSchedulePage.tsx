@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { coachApi } from '../../api/coach'
 import type { ClassEvent, GroupSummary, ScheduleSlot, TrainingReminder } from '../../api/types'
 import { ApiError } from '../../api/client'
@@ -45,6 +46,7 @@ function timeRange(event: { startTime: string; endTime?: string | null }) {
 }
 
 export function CoachSchedulePage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const today = new Date()
   const todayIso = toIsoDate(today.getFullYear(), today.getMonth(), today.getDate())
   const [year, setYear] = useState(today.getFullYear())
@@ -96,6 +98,14 @@ export function CoachSchedulePage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (searchParams.get('add') !== 'slot') return
+    setShowForm(true)
+    const next = new URLSearchParams(searchParams)
+    next.delete('add')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7

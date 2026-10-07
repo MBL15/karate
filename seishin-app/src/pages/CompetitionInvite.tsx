@@ -7,12 +7,13 @@ import { ParentHero } from '../components/parent/ParentHero'
 import { ParentPageShell } from '../components/parent/ParentPageShell'
 import { ParentError, ParentLoading } from '../components/parent/ParentScreenState'
 import { IconActivity, IconCalendar, IconMapPin } from '../components/ui/Icons'
+import { ParentEmptyHint } from '../components/parent/ParentEmptyHint'
 import { useParentChild } from '../context/ParentChildContext'
 import { formatDate } from '../utils/format'
 
 export function CompetitionInvite() {
   const navigate = useNavigate()
-  const { selectedChildId, selectedChild } = useParentChild()
+  const { children, selectedChildId, selectedChild } = useParentChild()
   const [competition, setCompetition] = useState<UpcomingCompetition | null>(null)
   const [weight, setWeight] = useState('32')
   const [discipline, setDiscipline] = useState<'KATA' | 'KUMITE'>('KATA')
@@ -54,6 +55,19 @@ export function CompetitionInvite() {
   const subtitle = competition
     ? `${formatDate(competition.eventDate)} · ${selectedChild?.firstName ?? 'ребёнок'}`
     : undefined
+
+  if (children.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-lg bg-white px-5 pt-[max(1.25rem,env(safe-area-inset-top,0px))] pb-6">
+        <h1 className="text-[1.75rem] font-extrabold text-[#101828]">События</h1>
+        <p className="mt-1 text-sm text-[#667085]">Турниры и мероприятия секции</p>
+        <ParentEmptyHint
+          title="Сначала привяжите ребёнка"
+          description="После привязки здесь появятся приглашения на соревнования и ответы тренеру."
+        />
+      </div>
+    )
+  }
 
   return (
     <ParentPageShell

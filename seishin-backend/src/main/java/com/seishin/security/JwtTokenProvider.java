@@ -28,6 +28,7 @@ public class JwtTokenProvider {
         Instant expiry = now.plus(properties.getExpirationHours(), ChronoUnit.HOURS);
         return Jwts.builder()
                 .subject(String.valueOf(user.getId()))
+                .claim("login", user.getLogin())
                 .claim("phone", user.getPhone())
                 .claim("role", user.getRole().name())
                 .claim("name", user.getName())

@@ -9,6 +9,8 @@ import java.util.List;
 @Data
 @Builder
 public class CoachDashboardDto {
+    private String clubName;
+    private String joinCode;
     private int totalStudents;
     private int totalGroups;
     private int upcomingBirthdays;

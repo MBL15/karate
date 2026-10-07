@@ -2,6 +2,7 @@ import type {
   AttendanceStatus,
   BadgeDefinition,
   BeltLevel,
+  BeltSettings,
   ChatMessage,
   ChatThread,
   ClassEvent,
@@ -41,6 +42,17 @@ export const coachApi = {
     }),
   badges: () => apiFetch<BadgeDefinition[]>('/api/coach/badges'),
   belts: () => apiFetch<BeltLevel[]>('/api/coach/belts'),
+  beltSettings: () => apiFetch<BeltSettings>('/api/coach/belts/settings'),
+  updateBeltSettings: (payload: BeltSettings) =>
+    apiFetch<BeltSettings>('/api/coach/belts/settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  updateBeltLevel: (beltLevelId: number, sessionsRequired: number | null) =>
+    apiFetch<BeltLevel>(`/api/coach/belts/${beltLevelId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ sessionsRequired }),
+    }),
   assignBelt: (studentId: number, beltLevelId: number) =>
     apiFetch<StudentSummary>(`/api/coach/students/${studentId}/belt`, {
       method: 'POST',
@@ -72,7 +84,7 @@ export const coachApi = {
       clubName: string
       studentId?: number | null
       studentName?: string | null
-      expiresAt: string
+      expiresAt?: string | null
       kind: 'CLUB' | 'STUDENT'
     }>('/api/coach/invite-codes', {
       method: 'POST',

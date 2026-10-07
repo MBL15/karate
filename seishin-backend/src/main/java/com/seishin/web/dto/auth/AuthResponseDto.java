@@ -10,6 +10,7 @@ public class AuthResponseDto {
     private String token;
     private Long userId;
     private String name;
+    private String login;
     private String phone;
     private Role role;
     private Long clubId;

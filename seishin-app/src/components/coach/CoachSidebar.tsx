@@ -15,13 +15,15 @@ const imgAvatar = '/assets/coach/avatar-coach.svg'
 
 const items = [
   { to: '/coach', label: 'Главная', icon: imgGrid, end: true },
-  { to: '/coach/students', label: 'Ученики', icon: imgUsers },
-  { to: '/coach/schedule', label: 'Занятия', icon: imgCalendar },
+  { to: '/coach/students', label: 'База', icon: imgUsers },
+  { to: '/coach/tools', label: 'Инструменты', icon: imgGrid },
+  { to: '/coach/schedule', label: 'Календарь', icon: imgCalendar },
+  { to: '/coach/attendance', label: 'Посещаемость', icon: imgUsers },
   { to: '/coach/awards', label: 'Награды', icon: imgAward },
   { to: '/coach/competitions', label: 'Соревнования', icon: imgTrophy },
 ]
 
-export function CoachSidebar() {
+export function CoachSidebar({ onCreate }: { onCreate: () => void }) {
   const { user } = useAuth()
   const [groups, setGroups] = useState<GroupSummary[]>([])
 
@@ -33,13 +35,22 @@ export function CoachSidebar() {
     <aside className="gradient-app-sidebar hidden w-64 shrink-0 flex-col px-4 py-6 lg:flex">
       <BrandMark variant="coach" size="md" showLabel />
 
-      <div className="mt-8">
+      <button
+        type="button"
+        onClick={onCreate}
+        className="mt-6 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#f5c518] px-3 py-2.5 text-sm font-bold text-navy-950 transition hover:brightness-95 active:scale-[0.99]"
+      >
+        <IconPlus size={16} />
+        Создать
+      </button>
+
+      <div className="mt-6">
         <p className="px-3 text-xs font-semibold uppercase tracking-wider text-text-on-dark">Ваши группы</p>
         <ul className="mt-2 space-y-1">
           {groups.map((group) => (
             <li key={group.id}>
               <Link
-                to="/coach/students"
+                to={`/coach/students?group=${group.id}`}
                 className="block min-h-11 w-full rounded-xl px-3 py-2.5 text-left text-sm text-text-on-dark transition hover:bg-white/8 hover:text-white"
               >
                 {group.name} · {group.studentCount} уч.
@@ -47,16 +58,9 @@ export function CoachSidebar() {
             </li>
           ))}
         </ul>
-        <Link
-          to="/coach/students"
-          className="mt-2 flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-text-on-dark transition hover:bg-white/8 hover:text-white"
-        >
-          <IconPlus size={16} />
-          Добавить ученика
-        </Link>
       </div>
 
-      <nav className="mt-8 space-y-1" aria-label="Разделы кабинета">
+      <nav className="mt-6 space-y-1" aria-label="Разделы кабинета">
         {items.map((item) => (
           <NavLink
             key={item.to}

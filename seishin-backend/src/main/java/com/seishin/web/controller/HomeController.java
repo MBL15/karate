@@ -18,8 +18,7 @@ public class HomeController {
         body.put("docs", "README.md");
         body.put("auth", Map.of(
                 "register", "POST /api/auth/register",
-                "requestOtp", "POST /api/auth/otp/request",
-                "verifyOtp", "POST /api/auth/otp/verify"
+                "login", "POST /api/auth/login"
         ));
         body.put("h2Console", "/h2-console");
         return body;

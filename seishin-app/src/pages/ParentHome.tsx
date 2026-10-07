@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { parentApi } from '../api/parent'
-import type { HistoryEntry, ParentChildHome } from '../api/types'
+import type { HistoryEntry, NextTraining, ParentChildHome } from '../api/types'
 import { ApiError } from '../api/client'
 import { ParentChildHeroBar } from '../components/parent/ParentChildHeroBar'
+import { ParentOnboarding } from '../components/parent/ParentOnboarding'
 import { ParentPageShell } from '../components/parent/ParentPageShell'
 import { ParentError, ParentLoading } from '../components/parent/ParentScreenState'
 import { BeltProgressRing } from '../components/ui/BeltProgressRing'
@@ -14,7 +15,8 @@ import { QuickActions } from '../components/ui/QuickActions'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { useAuth } from '../context/AuthContext'
 import { useParentChild } from '../context/ParentChildContext'
-import { attendanceDayClass, attendanceStatusLabel, formatDate, nextBeltLabel, paymentStatusUi } from '../utils/format'
+import { attendanceDayClass, attendanceStatusLabel, formatDate, paymentStatusUi } from '../utils/format'
+import { beltNextDisplayName, beltProgressValue, beltShowsPercent } from '../utils/beltProgress'
 
 const imgUser = '/assets/parent/user.svg'
 const imgAward = '/assets/parent/award.svg'
@@ -22,26 +24,123 @@ const imgFolder = '/assets/parent/folder.svg'
 const imgTrophy = '/assets/parent/trophy.svg'
 
 function BeltProgressPanel({ home }: { home: ParentChildHome }) {
+  const showPct = beltShowsPercent(home)
+  const nextLabel = beltNextDisplayName(home)
   return (
     <div className="card p-6">
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
         <BeltProgressRing
           variant="card"
-          value={home.progressPercent}
+          value={beltProgressValue(home)}
           beltName={home.beltName}
-          nextLabel={nextBeltLabel(home.beltName)}
+          nextLabel={nextLabel}
+          showPercent={showPct}
+          centerCaption="Тренер"
         />
         <div className="min-w-0 flex-1 text-center sm:text-left">
           <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Текущий уровень</p>
           <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-text">{home.beltName} пояс</h2>
-          <div className="mt-5">
-            <ProgressBar
-              value={home.progressPercent}
-              label={`Прогресс до ${nextBeltLabel(home.beltName)}`}
-            />
-          </div>
+          <p className="mt-2 text-sm text-text-secondary">{home.progressLabel}</p>
+          {showPct && (
+            <div className="mt-5">
+              <ProgressBar
+                value={beltProgressValue(home)}
+                label={
+                  home.beltAssignmentMode === 'ATTENDANCE' && home.sessionsRequired
+                    ? `${home.sessionsCompleted ?? 0} / ${home.sessionsRequired} занятий`
+                    : `Прогресс до ${nextLabel}`
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function formatTrainingTime(value: string) {
+  return value.length >= 5 ? value.slice(0, 5) : value
+}
+
+function NextTrainingPanel({
+  training,
+  childId,
+  onUpdated,
+}: {
+  training: NextTraining
+  childId: number
+  onUpdated: (next: NextTraining) => void
+}) {
+  const [saving, setSaving] = useState<'CONFIRMED' | 'DECLINED' | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  const respond = async (status: 'CONFIRMED' | 'DECLINED') => {
+    setSaving(status)
+    setErr(null)
+    try {
+      const updated = await parentApi.setTrainingIntent(childId, {
+        groupId: training.groupId,
+        sessionDate: training.date,
+        startTime: training.startTime,
+        rsvpStatus: status,
+      })
+      onUpdated(updated)
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Не удалось сохранить')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const timeLabel = formatTrainingTime(training.startTime)
+  const endLabel = training.endTime ? formatTrainingTime(training.endTime) : null
+
+  return (
+    <div className="card mt-3 p-5">
+      <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Ближайшая тренировка</p>
+      <h3 className="mt-2 text-lg font-bold text-text">{formatDate(training.date)}</h3>
+      <p className="mt-1 text-sm text-text-secondary">
+        {timeLabel}
+        {endLabel ? `–${endLabel}` : ''} · {training.groupName}
+        {training.location ? ` · ${training.location}` : ''}
+      </p>
+      <p className="mt-3 text-sm text-text-secondary">Ребёнок придёт на занятие?</p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          disabled={saving !== null}
+          onClick={() => void respond('CONFIRMED')}
+          className={`min-h-11 rounded-xl text-sm font-semibold transition ${
+            training.intentStatus === 'CONFIRMED'
+              ? 'bg-brand-green text-white shadow-sm'
+              : 'border border-brand-green/40 bg-brand-green/10 text-brand-green'
+          }`}
+        >
+          {saving === 'CONFIRMED' ? '…' : 'Будем'}
+        </button>
+        <button
+          type="button"
+          disabled={saving !== null}
+          onClick={() => void respond('DECLINED')}
+          className={`min-h-11 rounded-xl text-sm font-semibold transition ${
+            training.intentStatus === 'DECLINED'
+              ? 'bg-text-secondary text-white'
+              : 'border border-border bg-surface-muted text-text-secondary'
+          }`}
+        >
+          {saving === 'DECLINED' ? '…' : 'Не сможем'}
+        </button>
+      </div>
+      {training.intentStatus === 'PENDING' && !err && (
+        <p className="mt-3 text-xs text-text-muted">Отметка видна тренеру в базе учеников</p>
+      )}
+      {training.intentStatus !== 'PENDING' && (
+        <p className="mt-3 text-xs font-medium text-brand-green">
+          {training.intentStatus === 'CONFIRMED' ? 'Вы отметили: ребёнок будет' : 'Вы отметили: ребёнок не придёт'}
+        </p>
+      )}
+      {err && <p className="alert-error mt-3 text-sm">{err}</p>}
     </div>
   )
 }
@@ -55,7 +154,7 @@ function PaymentBadge({ status, dueDate }: { status: 'PAID' | 'OVERDUE' | 'PENDI
 
 export function ParentHome() {
   const { user } = useAuth()
-  const { selectedChild, selectedChildId, loading: childrenLoading, error: childrenError } = useParentChild()
+  const { children, selectedChild, selectedChildId, loading: childrenLoading, error: childrenError } = useParentChild()
   const [home, setHome] = useState<ParentChildHome | null>(null)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,6 +212,10 @@ export function ParentHome() {
   const attendancePct = history.length ? Math.round((presentCount / history.length) * 100) : 0
   const latestAttendance = history[0]
 
+  if (!childrenLoading && !childrenError && children.length === 0) {
+    return <ParentOnboarding />
+  }
+
   return (
     <ParentPageShell
       title="Дневник"
@@ -142,10 +245,12 @@ export function ParentHome() {
             {home && (
               <div className="fade-in-up flex flex-col items-center">
                 <BeltProgressRing
-                  value={home.progressPercent}
+                  value={beltProgressValue(home)}
                   beltName={home.beltName}
-                  nextLabel={nextBeltLabel(home.beltName)}
+                  nextLabel={beltNextDisplayName(home)}
                   size={148}
+                  showPercent={beltShowsPercent(home)}
+                  centerCaption="Тренер"
                 />
 
                 <div className="mt-6 grid w-full grid-cols-3 gap-2 sm:gap-3">
@@ -185,6 +290,17 @@ export function ParentHome() {
               <QuickActions actions={quickActions} />
             </div>
           </div>
+
+          {home.nextTraining && selectedChildId && (
+            <div className="fade-in-up stagger-1">
+              <SectionHeader title="Тренировка" subtitle="Сообщите тренеру заранее" />
+              <NextTrainingPanel
+                training={home.nextTraining}
+                childId={selectedChildId}
+                onUpdated={(nextTraining) => setHome((prev) => (prev ? { ...prev, nextTraining } : prev))}
+              />
+            </div>
+          )}
 
           <div className="hidden lg:block fade-in-up stagger-2">
             <BeltProgressPanel home={home} />

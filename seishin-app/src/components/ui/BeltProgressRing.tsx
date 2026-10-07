@@ -4,6 +4,9 @@ type BeltProgressRingProps = {
   nextLabel: string
   size?: number
   variant?: 'hero' | 'card'
+  /** false — показываем пояс без процента (режим «только тренер») */
+  showPercent?: boolean
+  centerCaption?: string
 }
 
 export function BeltProgressRing({
@@ -12,8 +15,10 @@ export function BeltProgressRing({
   nextLabel,
   size = 148,
   variant = 'hero',
+  showPercent = true,
+  centerCaption,
 }: BeltProgressRingProps) {
-  const pct = Math.min(100, Math.max(0, value))
+  const pct = showPercent ? Math.min(100, Math.max(0, value)) : 0
   const stroke = 8
   const radius = (size - stroke) / 2
   const circumference = 2 * Math.PI * radius
@@ -42,8 +47,9 @@ export function BeltProgressRing({
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={offset}
+            strokeDashoffset={showPercent ? offset : circumference}
             className="transition-all duration-700 ease-out"
+            opacity={showPercent ? 1 : 0.35}
           />
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -53,9 +59,15 @@ export function BeltProgressRing({
           </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center px-3 text-center">
-          <span className={`text-3xl font-extrabold leading-none tracking-tight ${onDark ? 'text-white' : 'text-text'}`}>
-            {Math.round(pct)}%
-          </span>
+          {showPercent ? (
+            <span className={`text-3xl font-extrabold leading-none tracking-tight ${onDark ? 'text-white' : 'text-text'}`}>
+              {Math.round(pct)}%
+            </span>
+          ) : (
+            <span className={`text-sm font-bold leading-snug ${onDark ? 'text-white' : 'text-text'}`}>
+              {centerCaption ?? 'Аттестация'}
+            </span>
+          )}
           <span
             className={`mt-1 max-w-[6.5rem] text-[11px] font-semibold leading-snug ${onDark ? 'text-text-on-dark' : 'text-text-secondary'}`}
           >

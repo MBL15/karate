@@ -1,0 +1,27 @@
+---
+description: Маршруты, API-клиент и структура UI Karate Hub
+globs: seishin-app/src/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Frontend
+
+Точка входа — `src/main.tsx`. Маршруты объявляются только в `src/App.tsx`.
+
+## Маршруты
+
+- Публичные, внутри `SiteLayout`: `/`, `/for-parents`, `/for-coaches`, `/login`, `/register` (оба ведут на `LoginPage`).
+- `/coach/*` — `ProtectedRoute` с ролью `COACH` и `CoachLayout`: дашборд, attendance, students, schedule, awards, competitions, chat, secret.
+- `/app/*` — `ProtectedRoute` с ролью `PARENT` и `ParentAppLayout`: дом, profile, achievements, competition, history, chat, secret.
+- Редиректы: `/parent` → `/app`; `/profile`, `/achievements`, `/competition`, `/history` → соответствующие пути под `/app`.
+- Тот же список путей держать в `SpaForwardController`. Иначе прямой заход на `:8080` вернёт 404.
+
+## Данные и навигация
+
+- HTTP только через `apiFetch` в `src/api/client.ts`. Типы — `src/api/types.ts`. Вызовы — `api/auth.ts`, `api/coach.ts`, `api/parent.ts`.
+- Сессия — `AuthContext`. Выбранный ребёнок родителя — `ParentChildContext`.
+- Низ родителя — `ParentMobileNav`, бок — `ParentSidebar`. У тренера — `CoachMobileNav` и `CoachSidebar`. Вторую нижнюю панель не добавлять.
+
+## Внешний вид
+
+Токены и классы `.card`, `.btn-primary` живут в `src/index.css`. Родитель — зелёный, тренер и маркетинговые страницы — синий, тёмные блоки — navy. Иконки: `src/components/ui/Icons.tsx` и именованные SVG в `public/assets/{coach,parent,profile,...}/`. Файлы с UUID из Figma в `public/assets` не класть.

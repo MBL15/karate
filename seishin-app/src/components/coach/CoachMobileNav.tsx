@@ -1,196 +1,201 @@
-import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { IconPlus, IconTrophy, IconUser, IconUsers } from '../ui/Icons'
+import { useEffect, useState, type ReactNode } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { IconHouse, IconPlus, IconSparkles, IconUsers } from '../ui/Icons'
 
-const imgGrid = '/assets/coach/grid.svg'
-const imgUsers = '/assets/coach/users.svg'
-const imgCalendar = '/assets/coach/calendar.svg'
+const accentRed = '#ff4d4f'
 
 type Tab = {
   to: string
   label: string
-  icon: string
+  icon: 'home' | 'users' | 'tools'
   end?: boolean
 }
 
 const tabs: Tab[] = [
-  { to: '/coach', label: 'Главная', icon: imgGrid, end: true },
-  { to: '/coach/students', label: 'База', icon: imgUsers },
-  { to: '/coach/schedule', label: 'Занятия', icon: imgCalendar },
+  { to: '/coach', label: 'Главная', icon: 'home', end: true },
+  { to: '/coach/students', label: 'База', icon: 'users' },
+  { to: '/coach/tools', label: 'Инструменты', icon: 'tools' },
 ]
 
-const addActions = [
-  {
-    id: 'student' as const,
-    label: 'Ученика',
-    description: 'Добавить в группу',
-    icon: IconUser,
-  },
-  {
-    id: 'group' as const,
-    label: 'Группу',
-    description: 'Новая группа занятий',
-    icon: IconUsers,
-  },
-  {
-    id: 'competition' as const,
-    label: 'Соревнование',
-    description: 'Турнир в календаре',
-    icon: IconTrophy,
-  },
-]
+function activeTabIndex(pathname: string, createOpen: boolean) {
+  if (createOpen) return 2
+  if (pathname.endsWith('/secret')) return 4
+  if (pathname.startsWith('/coach/tools')) return 3
+  if (pathname.startsWith('/coach/students')) return 1
+  if (pathname === '/coach') return 0
+  return 0
+}
 
-function CoachTab({ tab }: { tab: Tab }) {
+function ActiveTabFrame({ index, pulse }: { index: number; pulse: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[5] grid grid-cols-5" aria-hidden>
+      <div className="relative px-1 py-0.5" style={{ gridColumn: index + 1 }}>
+        <svg
+          className="absolute inset-0 size-full overflow-visible"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <rect
+            key={`${index}-${pulse}`}
+            className="coach-tab-frame-stroke"
+            x="2.2"
+            y="2.2"
+            width="95.6"
+            height="95.6"
+            rx="16"
+            ry="16"
+            fill="#ffffff"
+            stroke={accentRed}
+            strokeWidth="2.75"
+            vectorEffect="nonScalingStroke"
+            pathLength={100}
+            strokeDasharray={100}
+            strokeDashoffset={100}
+          />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+function TabIcon({ icon, active }: { icon: Tab['icon']; active: boolean }) {
+  const common = {
+    size: 22,
+    className: active ? 'text-[#c4a035]' : 'text-text-muted',
+  }
+  if (icon === 'home') return <IconHouse {...common} />
+  if (icon === 'users') return <IconUsers {...common} />
+  return <IconSparkles {...common} />
+}
+
+function NavItemBody({
+  active,
+  icon,
+  label,
+}: {
+  active: boolean
+  icon: ReactNode
+  label: ReactNode
+}) {
+  return (
+    <span className="flex w-full max-w-[4.25rem] flex-col items-center justify-center gap-1">
+      <span className="flex size-6 shrink-0 items-center justify-center">{icon}</span>
+      <span
+        className={`w-full text-center text-[9px] leading-[1.15] tracking-tight ${
+          active ? 'font-bold' : 'font-medium'
+        }`}
+      >
+        {label}
+      </span>
+    </span>
+  )
+}
+
+const navItemClass =
+  'relative z-10 flex h-full w-full flex-col items-center justify-center px-0.5 py-1 transition-colors duration-300'
+
+function CoachTab({ tab, slotActive }: { tab: Tab; slotActive: boolean }) {
   return (
     <NavLink
       to={tab.to}
       end={tab.end}
-      className={({ isActive }) =>
-        `flex h-full w-full flex-col items-center justify-center gap-1.5 transition-colors ${
-          isActive ? 'text-brand-green' : 'text-text-muted'
-        }`
-      }
+      className={({ isActive }) => {
+        const highlighted = isActive || slotActive
+        return `${navItemClass} ${highlighted ? 'text-[#c4a035]' : 'text-text-muted'}`
+      }}
     >
-      {({ isActive }) => (
-        <>
-          <span className="flex size-6 items-center justify-center">
-            <img
-              src={tab.icon}
-              alt=""
-              className={`size-[1.125rem] transition-opacity ${isActive ? 'opacity-100' : 'opacity-55'}`}
-              style={
-                isActive
-                  ? { filter: 'invert(55%) sepia(65%) saturate(500%) hue-rotate(5deg) brightness(95%)' }
-                  : undefined
-              }
-            />
-          </span>
-          <span className={`text-center text-[10px] leading-none ${isActive ? 'font-bold' : 'font-medium'}`}>
-            {tab.label}
-          </span>
-        </>
-      )}
+      {({ isActive }) => {
+        const highlighted = isActive || slotActive
+        return (
+          <NavItemBody
+            active={highlighted}
+            icon={<TabIcon icon={tab.icon} active={highlighted} />}
+            label={tab.label}
+          />
+        )
+      }}
     </NavLink>
   )
 }
 
-function SecretTab() {
+export function CoachMobileNav({
+  createOpen,
+  onToggleCreate,
+}: {
+  createOpen: boolean
+  onToggleCreate: () => void
+}) {
+  const { pathname } = useLocation()
+  const activeIndex = activeTabIndex(pathname, createOpen)
+  const [framePulse, setFramePulse] = useState(0)
+
+  useEffect(() => {
+    setFramePulse((n) => n + 1)
+  }, [activeIndex])
+
   return (
-    <NavLink
-      to="/coach/secret"
-      className={({ isActive }) =>
-        `flex h-full w-full flex-col items-center justify-center gap-1.5 transition-colors ${
-          isActive ? 'text-brand-green' : 'text-text-muted/60'
-        }`
-      }
-      aria-label="Секретный раздел"
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] lg:hidden"
+      aria-label="Разделы кабинета"
     >
-      {({ isActive }) => (
-        <>
-          <span
-            className={`flex size-6 items-center justify-center text-sm font-semibold leading-none ${
-              isActive ? 'text-brand-green' : 'text-text-muted/70'
-            }`}
-          >
-            ?
-          </span>
-          <span className="text-[10px] font-medium leading-none opacity-0" aria-hidden>
-            ·
-          </span>
-        </>
-      )}
-    </NavLink>
-  )
-}
-
-export function CoachMobileNav() {
-  const navigate = useNavigate()
-  const [addOpen, setAddOpen] = useState(false)
-
-  const openAdd = (type: 'student' | 'group' | 'competition') => {
-    setAddOpen(false)
-    if (type === 'student') navigate('/coach/students?add=student')
-    else if (type === 'group') navigate('/coach/students?add=group')
-    else navigate('/coach/competitions?add=competition')
-  }
-
-  return (
-    <>
-      {addOpen && (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-navy-950/45 lg:hidden"
-          aria-label="Закрыть меню добавления"
-          onClick={() => setAddOpen(false)}
-        />
-      )}
-
-      {addOpen && (
-        <div
-          role="menu"
-          aria-label="Что добавить"
-          className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-50 overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-elevated)] lg:hidden"
-        >
-          <p className="border-b border-border-light px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Что добавить?
-          </p>
-          <div className="p-2">
-            {addActions.map((action) => {
-              const Icon = action.icon
-              return (
-                <button
-                  key={action.id}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => openAdd(action.id)}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-surface-muted active:scale-[0.99]"
-                >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-green-light text-brand-green">
-                    <Icon size={20} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-text">{action.label}</span>
-                    <span className="block text-xs text-text-secondary">{action.description}</span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      <nav
-        className="fixed inset-x-0 bottom-0 z-50 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] lg:hidden"
-        aria-label="Разделы кабинета"
-      >
-        <div className="relative mx-auto max-w-sm">
-          <div className="rounded-[2rem] border border-border/90 bg-surface px-1 py-2.5 shadow-[0_4px_24px_rgb(18_24_32_/_0.1)]">
-            <div className="grid min-h-[3.75rem] grid-cols-5 items-center">
-              <CoachTab tab={tabs[0]} />
-              <CoachTab tab={tabs[1]} />
+      <div className="relative mx-auto max-w-sm">
+        <div className="relative overflow-visible rounded-[2rem] border border-[#ebe6dc] bg-white px-0.5 pb-2.5 pt-1.5 shadow-[0_8px_28px_rgb(18_24_32_/_0.08)]">
+          <div className="relative min-h-[4.25rem]">
+            <ActiveTabFrame index={activeIndex} pulse={framePulse} />
+            <div className="relative z-10 grid h-full min-h-[4.25rem] grid-cols-5 items-center">
+              <CoachTab tab={tabs[0]} slotActive={activeIndex === 0} />
+              <CoachTab tab={tabs[1]} slotActive={activeIndex === 1} />
               <button
                 type="button"
-                onClick={() => setAddOpen((open) => !open)}
-                aria-expanded={addOpen}
-                aria-haspopup="menu"
-                aria-label={addOpen ? 'Закрыть меню добавления' : 'Добавить'}
-                className="flex h-full w-full flex-col items-center justify-center gap-1.5 transition-transform active:scale-95"
+                onClick={onToggleCreate}
+                aria-expanded={createOpen}
+                aria-haspopup="dialog"
+                aria-label={createOpen ? 'Закрыть меню создания' : 'Создать'}
+                className={`${navItemClass} active:scale-95`}
               >
-                <span
-                  className={`flex size-9 items-center justify-center rounded-full bg-brand-green text-navy-950 shadow-[0_2px_8px_rgb(18_24_32_/_0.15)] transition-transform ${
-                    addOpen ? 'rotate-45' : ''
-                  }`}
-                >
-                  <IconPlus size={20} />
-                </span>
-                <span className="text-[10px] font-medium leading-none text-text-muted">Добавить</span>
+                <NavItemBody
+                  active={createOpen || activeIndex === 2}
+                  icon={
+                    <span
+                      className={`flex size-8 items-center justify-center rounded-full bg-[#f5c518] text-navy-950 shadow-[0_2px_8px_rgb(245_197_24_/_0.45)] transition-transform ${
+                        createOpen ? 'rotate-45' : ''
+                      }`}
+                    >
+                      <IconPlus size={18} />
+                    </span>
+                  }
+                  label="Создать"
+                />
               </button>
-              <CoachTab tab={tabs[2]} />
-              <SecretTab />
+              <CoachTab tab={tabs[2]} slotActive={activeIndex === 3} />
+              <NavLink
+                to="/coach/secret"
+                className={({ isActive }) => {
+                  const highlighted = isActive || activeIndex === 4
+                  return `${navItemClass} ${highlighted ? 'text-[#c4a035]' : 'text-text-muted/60'}`
+                }}
+                aria-label="Секретный раздел"
+              >
+                {({ isActive }) => (
+                  <NavItemBody
+                    active={isActive || activeIndex === 4}
+                    icon={
+                      <span
+                        className={`flex size-6 items-center justify-center text-sm font-semibold leading-none ${
+                          isActive ? 'text-[#c4a035]' : 'text-text-muted/70'
+                        }`}
+                      >
+                        ?
+                      </span>
+                    }
+                    label={<span className="opacity-0 select-none" aria-hidden>·</span>}
+                  />
+                )}
+              </NavLink>
             </div>
           </div>
         </div>
-      </nav>
-    </>
+      </div>
+    </nav>
   )
 }

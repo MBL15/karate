@@ -13,13 +13,19 @@ public class RegisterDto {
     @Size(max = 80)
     private String firstName;
 
-    @NotBlank
     @Size(max = 80)
     private String lastName;
 
+    @Size(max = 120)
+    private String clubName;
+
     @NotBlank
-    @Pattern(regexp = "^\\+\\d{10,15}$")
-    private String phone;
+    @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9._-]{2,31}$")
+    private String login;
+
+    @NotBlank
+    @Size(min = 6, max = 72)
+    private String password;
 
     @NotNull
     private Role role;

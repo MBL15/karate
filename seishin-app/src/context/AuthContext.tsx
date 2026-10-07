@@ -6,7 +6,8 @@ export type { UserRole }
 export type AuthUser = {
   userId: number
   name: string
-  phone: string
+  login: string
+  phone: string | null
   role: UserRole
   clubId: number | null
   token: string

@@ -4,6 +4,7 @@ import type {
   ChatThread,
   Document,
   HistoryEntry,
+  NextTraining,
   ParentChildHome,
   ParentChildProfile,
   Payment,
@@ -26,6 +27,19 @@ export const parentApi = {
       body: JSON.stringify(payload),
     }),
   home: (childId: number) => apiFetch<ParentChildHome>(`/api/parent/children/${childId}/home`),
+  setTrainingIntent: (
+    childId: number,
+    payload: {
+      groupId: number
+      sessionDate: string
+      startTime: string
+      rsvpStatus: 'CONFIRMED' | 'DECLINED'
+    },
+  ) =>
+    apiFetch<NextTraining>(`/api/parent/children/${childId}/training-intent`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   profile: (childId: number) => apiFetch<ParentChildProfile>(`/api/parent/children/${childId}/profile`),
   achievements: (childId: number) => apiFetch<Achievement[]>(`/api/parent/children/${childId}/achievements`),
   history: (childId: number) => apiFetch<HistoryEntry[]>(`/api/parent/children/${childId}/history`),

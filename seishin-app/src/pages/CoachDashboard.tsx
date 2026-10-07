@@ -1,395 +1,441 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { coachApi } from '../api/coach'
-import type { CoachDashboard, Payment, StudentSummary } from '../api/types'
+import type { ClassEvent, CoachDashboard as CoachDashboardData, SessionAttendance } from '../api/types'
 import { ApiError } from '../api/client'
 import { LogoutButton } from '../components/auth/LogoutButton'
-import { CoachPageShell } from '../components/coach/CoachPageShell'
 import { CoachError, CoachLoading } from '../components/coach/CoachScreenState'
-import { IconArrowRight, IconCalendar, IconCheck, IconTrophy, IconUsers } from '../components/ui/Icons'
-import { ProgressBar } from '../components/ui/ProgressBar'
+import { IconArrowRight, IconClipboard, IconTrophy, IconUsers } from '../components/ui/Icons'
 import { useAuth } from '../context/AuthContext'
-import { formatDate, paymentStatusUi } from '../utils/format'
+
+const avatar = '/assets/coach/avatar-coach.svg'
+
+type Range = 'groups' | 'today' | 'week'
+
+const tones = [
+  { tile: 'bg-[#f8e7b0] text-[#a16207]' },
+  { tile: 'bg-[#dbe7fb] text-[#1d4e89]' },
+  { tile: 'bg-[#eadcfd] text-[#6d28d9]' },
+]
+
+function pad(n: number) {
+  return String(n).padStart(2, '0')
+}
+
+function toIso(date: Date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function startOfWeek(date: Date) {
+  const copy = new Date(date)
+  const day = (copy.getDay() + 6) % 7
+  copy.setDate(copy.getDate() - day)
+  return copy
+}
+
+function addDays(date: Date, days: number) {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + days)
+  return copy
+}
 
 function formatTime(value?: string | null) {
   if (!value) return ''
   return value.slice(0, 5)
 }
 
-function ClubOverviewPanel({
-  dashboard,
-  groupName,
-}: {
-  dashboard: CoachDashboard
-  groupName: string
-}) {
-  return (
-    <div className="card p-6">
-      <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Сводка клуба</p>
-      <h2 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight text-text">{groupName}</h2>
-      <p className="mt-2 text-sm text-text-secondary">
-        {dashboard.totalStudents} учеников · {dashboard.totalGroups} групп
-      </p>
-      {dashboard.nextClass && (
-        <div className="mt-5 rounded-2xl bg-surface-muted px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Ближайшая тренировка</p>
-          <p className="mt-2 font-semibold text-text">
-            {new Date(`${dashboard.nextClass.date}T12:00:00`).toLocaleDateString('ru-RU', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })}
-          </p>
-          <p className="mt-1 text-sm text-text-secondary">
-            {[
-              formatTime(dashboard.nextClass.startTime) +
-                (dashboard.nextClass.endTime ? `–${formatTime(dashboard.nextClass.endTime)}` : ''),
-              dashboard.nextClass.groupName,
-              dashboard.nextClass.location,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        </div>
-      )}
-    </div>
+function timeRange(event: ClassEvent) {
+  const start = formatTime(event.startTime)
+  const end = formatTime(event.endTime)
+  return end ? `${start} – ${end}` : start
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function formatDay(iso: string) {
+  return capitalize(
+    new Date(`${iso}T12:00:00`).toLocaleDateString('ru-RU', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }),
   )
+}
+
+function greeting(date: Date) {
+  const hour = date.getHours()
+  if (hour < 12) return 'Доброе утро'
+  if (hour < 18) return 'Добрый день'
+  return 'Добрый вечер'
+}
+
+function plural(n: number, one: string, few: string, many: string) {
+  const n10 = n % 10
+  const n100 = n % 100
+  if (n10 === 1 && n100 !== 11) return one
+  if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return few
+  return many
+}
+
+function classKey(event: ClassEvent) {
+  return `${event.groupId}-${event.date}-${event.startTime}`
+}
+
+function attendanceLink(event: ClassEvent) {
+  const params = new URLSearchParams({
+    groupId: String(event.groupId),
+    date: event.date,
+    time: formatTime(event.startTime),
+  })
+  return `/coach/attendance?${params.toString()}`
+}
+
+function parentWillAttendCount(session: SessionAttendance | undefined) {
+  if (!session) return 0
+  return session.entries.filter((entry) => entry.parentIntent === 'CONFIRMED').length
+}
+
+function parentPendingCount(session: SessionAttendance | undefined, total: number) {
+  if (!session) return total
+  return session.entries.filter((entry) => entry.parentIntent == null || entry.parentIntent === 'PENDING').length
 }
 
 export function CoachDashboard() {
   const { user } = useAuth()
-  const [dashboard, setDashboard] = useState<CoachDashboard | null>(null)
-  const [students, setStudents] = useState<StudentSummary[]>([])
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [competitionName, setCompetitionName] = useState<string | null>(null)
-  const [competitionId, setCompetitionId] = useState<number | null>(null)
+  const [range, setRange] = useState<Range>('today')
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [dashboard, setDashboard] = useState<CoachDashboardData | null>(null)
+  const [classes, setClasses] = useState<ClassEvent[]>([])
+  const [attendance, setAttendance] = useState<Record<string, SessionAttendance>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [actionMsg, setActionMsg] = useState<string | null>(null)
-  const [actionIsError, setActionIsError] = useState(false)
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
-  const [inviteCode, setInviteCode] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const today = useMemo(() => new Date(), [])
+  const todayIso = toIso(today)
+  const weekFrom = toIso(startOfWeek(today))
+  const weekTo = toIso(addDays(startOfWeek(today), 6))
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [dash, studs, pays, comps] = await Promise.all([
+      const [dash, weekClasses] = await Promise.all([
         coachApi.dashboard(),
-        coachApi.students(),
-        coachApi.payments(),
-        coachApi.competitions(),
+        coachApi.classes(weekFrom, weekTo),
       ])
       setDashboard(dash)
-      setStudents(studs)
-      setPayments(pays)
-      setSelectedStudentId(studs[0]?.id ?? null)
-      const comp = comps[0]
-      setCompetitionName(comp?.name ?? null)
-      setCompetitionId(comp?.id ?? null)
+      setClasses(weekClasses)
+      const sessions = await Promise.all(
+        weekClasses.map(async (event) => {
+          const session = await coachApi.getAttendance(event.groupId, event.date, event.startTime)
+          return [classKey(event), session] as const
+        }),
+      )
+      setAttendance(Object.fromEntries(sessions))
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Ошибка загрузки')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [todayIso, weekFrom, weekTo])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const group = dashboard?.groups[0]
-  const subtitle = group
-    ? `${group.name} · ${dashboard?.totalStudents ?? 0} учеников`
-    : `${dashboard?.totalStudents ?? 0} учеников`
+  const visibleClasses = classes.filter((event) => (range === 'week' ? true : event.date === todayIso))
+  const classesByDate = visibleClasses.reduce<Record<string, ClassEvent[]>>((map, event) => {
+    if (!map[event.date]) map[event.date] = []
+    map[event.date].push(event)
+    return map
+  }, {})
 
-  const pendingPayments = payments.filter((p) => p.status !== 'PAID').length
+  const unmarkedStudents = classes
+    .filter((event) => event.date === todayIso)
+    .reduce((sum, event) => {
+      const session = attendance[classKey(event)]
+      if (event.upcoming) {
+        return sum + parentPendingCount(session, event.studentCount)
+      }
+      return session?.sessionId ? sum : sum + event.studentCount
+    }, 0)
+
+  const pendingPayments = dashboard?.pendingPayments ?? 0
   const pendingRsvps = dashboard?.pendingCompetitionRsvps ?? 0
-  const needsAttention = pendingPayments > 0 || pendingRsvps > 0
-
-  const paymentForStudent = (studentId: number) =>
-    payments.find((p) => p.studentId === studentId && p.status !== 'PAID')
-
-  const showAction = (message: string, isError = false) => {
-    setActionMsg(message)
-    setActionIsError(isError)
-  }
-
-  const createInvite = async () => {
-    try {
-      const res = await coachApi.createInviteCode()
-      setInviteCode(res.code)
-      showAction(`Код клуба для родителей: ${res.code}`)
-    } catch (e) {
-      showAction(e instanceof ApiError ? e.message : 'Ошибка', true)
-    }
-  }
+  const firstName = user?.name.split(' ')[0] ?? 'Тренер'
 
   const sendReminders = async () => {
     try {
       const res = await coachApi.sendPaymentReminders()
-      showAction(`Отправлено напоминаний: ${res.length}`)
+      setNotice(`Отправлено напоминаний: ${res.length}`)
     } catch (e) {
-      showAction(e instanceof ApiError ? e.message : 'Ошибка', true)
+      setNotice(e instanceof ApiError ? e.message : 'Не удалось отправить напоминания')
     }
   }
-
-  const exportCompetition = async () => {
-    if (!competitionId) return
-    try {
-      await coachApi.exportCompetition(competitionId)
-      showAction('Excel-файл скачан')
-    } catch (e) {
-      showAction(e instanceof Error ? e.message : 'Ошибка экспорта', true)
-    }
-  }
-
-  const headerActions = (
-    <>
-      <button type="button" onClick={createInvite} className="btn-on-dark">
-        Код клуба
-      </button>
-      <Link to="/coach/attendance" className="btn-coach">
-        Отметить посещаемость
-      </Link>
-    </>
-  )
 
   return (
-    <CoachPageShell
-      title="Кабинет"
-      subtitle={subtitle}
-      hero={
-        <div className="hero-app rounded-b-[1.75rem] px-5 pb-8 pt-5">
-          <div className="mb-6 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Karate Hub</p>
-            <h2 className="mt-2 text-2xl font-extrabold leading-tight text-white">
-              {user?.name.split(' ')[0] ?? 'Тренер'}
-            </h2>
-            <p className="mt-1 text-sm leading-snug text-white/70">{subtitle}</p>
-          </div>
-
-          {dashboard && (
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[
-                { value: dashboard.totalStudents, label: 'учеников' },
-                { value: dashboard.totalGroups, label: 'групп' },
-                { value: pendingPayments, label: 'оплат' },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-white/10 bg-white/10 px-2 py-4 text-center sm:px-3"
-                >
-                  <p className="text-xl font-extrabold leading-none text-white sm:text-2xl">{stat.value}</p>
-                  <p className="mt-2 text-[10px] font-semibold uppercase leading-none tracking-wider text-white/70">
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
+    <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-[max(1.5rem,var(--safe-top-effective))] lg:max-w-3xl lg:px-8 lg:pt-8">
+      <header className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[1.65rem] font-bold leading-tight tracking-tight text-text">
+            {greeting(today)},
+            <br />
+            {firstName}
+          </p>
+          {dashboard?.joinCode && (
+            <p className="mt-2 font-mono text-[1.75rem] font-bold leading-none tracking-[0.28em] text-text">
+              <span className="sr-only">Код клуба </span>
+              {dashboard.joinCode}
+            </p>
+          )}
+          <p className="mt-1 text-sm text-text-secondary">{dashboard?.clubName ?? 'Клуб'}</p>
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            aria-expanded={accountOpen}
+            aria-haspopup="menu"
+            aria-label="Аккаунт тренера"
+            onClick={() => setAccountOpen((open) => !open)}
+            className="size-12 overflow-hidden rounded-full ring-2 ring-white shadow-[var(--shadow-card)]"
+          >
+            <img src={avatar} alt="" className="size-full object-cover" />
+          </button>
+          {accountOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 z-20 mt-2 w-52 rounded-2xl border border-[#ebe6dc] bg-white p-3 shadow-[var(--shadow-elevated)]"
+            >
+              <p className="px-1 text-sm font-semibold text-text">{user?.name}</p>
+              <p className="px-1 text-xs text-text-secondary">Главный тренер</p>
+              <LogoutButton className="mt-3" label="Выйти" />
             </div>
           )}
-
-          <div className="mt-6 flex flex-wrap gap-2">{headerActions}</div>
         </div>
-      }
-    >
+      </header>
+
+      <div className="mt-5 grid grid-cols-3 rounded-full bg-white p-1 shadow-[var(--shadow-card)]" role="tablist" aria-label="Период">
+        {(
+          [
+            ['groups', 'Группы'],
+            ['today', 'Сегодня'],
+            ['week', 'Неделя'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={range === id}
+            onClick={() => setRange(id)}
+            className={`min-h-11 rounded-full text-sm font-semibold transition ${
+              range === id ? 'bg-[#f5c518] text-navy-950' : 'text-text-secondary hover:text-text'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
-        <CoachLoading />
+        <div className="mt-6">
+          <CoachLoading />
+        </div>
       ) : error || !dashboard ? (
-        <CoachError message={error ?? 'Ошибка загрузки'} />
+        <div className="mt-6">
+          <CoachError message={error ?? 'Ошибка загрузки'} onRetry={() => void load()} />
+        </div>
       ) : (
         <>
-          {actionMsg && (
-            <p className={actionIsError ? 'alert-error' : 'alert-success'} role="status">
-              {actionMsg}
-            </p>
-          )}
-          {inviteCode && (
-            <p className="alert-info font-mono">
-              Invite-код: <strong>{inviteCode}</strong>
+          {notice && (
+            <p className="alert-success mt-4" role="status">
+              {notice}
             </p>
           )}
 
-          <div className="hidden lg:block">
-            <ClubOverviewPanel dashboard={dashboard} groupName={group?.name ?? 'Karate Hub'} />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <Link to="/coach/students" className="card p-5 transition hover:border-brand-blue/30">
-              <div className="mb-3 flex items-center gap-2.5">
-                <span className="flex size-8 items-center justify-center rounded-xl bg-brand-blue-light text-brand-blue">
-                  <IconUsers size={18} />
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Ученики</span>
-              </div>
-              <p className="text-sm font-bold text-text">{dashboard.totalStudents} в группах</p>
-              <p className="mt-1 text-sm text-text-secondary">{group?.name ?? 'Состав и группы'}</p>
-            </Link>
-
-            <Link to="/coach/schedule" className="card p-5 transition hover:border-brand-blue/30">
-              <div className="mb-3 flex items-center gap-2.5">
-                <span className="flex size-8 items-center justify-center rounded-xl bg-brand-green-light text-brand-green">
-                  <IconCalendar size={18} />
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Занятия</span>
-              </div>
-              {dashboard.nextClass ? (
-                <>
-                  <p className="text-sm font-bold text-text">{dashboard.nextClass.groupName}</p>
-                  <p className="mt-1 text-sm text-text-secondary">
-                    {formatDate(dashboard.nextClass.date)} · {formatTime(dashboard.nextClass.startTime)}
-                  </p>
-                </>
+          {range === 'groups' ? (
+            <section className="mt-5 space-y-3" aria-label="Группы">
+              {dashboard.groups.length === 0 ? (
+                <p className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                  Групп пока нет
+                </p>
               ) : (
-                <>
-                  <p className="text-sm font-bold text-text">Расписание</p>
-                  <p className="mt-1 text-sm text-text-secondary">Календарь и напоминания</p>
-                </>
-              )}
-            </Link>
-
-            <Link to="/coach/awards" className="card p-5 transition hover:border-brand-blue/30">
-              <div className="mb-3 flex items-center gap-2.5">
-                <span className="flex size-8 items-center justify-center rounded-xl bg-warning-bg text-warning">
-                  <IconTrophy size={18} />
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Награды</span>
-              </div>
-              <p className="text-sm font-bold text-text">Значки и пояса</p>
-              <p className="mt-1 text-sm text-text-secondary">Выдача достижений ученикам</p>
-            </Link>
-          </div>
-
-          {(needsAttention || competitionName) && (
-            <div>
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-text-secondary">
-                Требует внимания
-              </h3>
-
-              {pendingPayments > 0 && (
-                <div className="card relative mb-4 overflow-hidden border-warning/30 bg-warning-bg p-5 lg:p-6">
-                  <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start">
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-warning/20 text-warning">
-                      <IconCheck size={24} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="mb-2 inline-block rounded bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                        Оплаты
-                      </span>
-                      <h4 className="text-base font-bold text-text lg:text-lg">
-                        {pendingPayments} неоплаченных взносов
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={sendReminders}
-                        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-warning py-2.5 text-sm font-semibold text-white transition hover:bg-warning/90 sm:w-auto sm:px-6"
-                      >
-                        Напомнить родителям
-                        <IconArrowRight size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {competitionName && (
-                <div className="card relative overflow-hidden border-warning/30 bg-warning-bg p-5 lg:p-6">
-                  <IconTrophy className="pointer-events-none absolute -top-4 -right-4 text-warning opacity-10" size={120} />
-                  <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start">
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-warning/20 text-warning">
-                      <IconTrophy size={24} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="mb-2 inline-block rounded bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                        Соревнование
-                      </span>
-                      <h4 className="text-base font-bold text-text lg:text-lg">{competitionName}</h4>
-                      {pendingRsvps > 0 && (
-                        <p className="mt-1 text-sm text-text-secondary">{pendingRsvps} ответов ждут подтверждения</p>
-                      )}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Link
-                          to="/coach/competitions"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-warning px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-warning/90"
-                        >
-                          Открыть детали
-                          <IconArrowRight size={16} />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={exportCompetition}
-                          className="btn-secondary"
-                        >
-                          Экспорт Excel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="card p-5 lg:p-6">
-            <h2 className="section-title mb-4">Ученики и оплаты</h2>
-            <div className="grid gap-2 lg:grid-cols-2">
-              {students.map((s) => {
-                const pay = paymentForStudent(s.id)
-                const ui = pay ? paymentStatusUi(pay.status, pay.dueDate) : paymentStatusUi('PAID')
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSelectedStudentId(s.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition ${
-                      selectedStudentId === s.id ? 'bg-brand-blue-light ring-1 ring-brand-blue/20' : 'hover:bg-surface-muted'
-                    }`}
+                dashboard.groups.map((group) => (
+                  <Link
+                    key={group.id}
+                    to={`/coach/students?group=${group.id}`}
+                    className="flex items-center gap-3 rounded-[1.25rem] bg-white px-4 py-4 shadow-[var(--shadow-card)] transition active:scale-[0.99]"
                   >
-                    <span className="flex size-10 items-center justify-center rounded-full bg-brand-blue-light text-sm font-bold text-brand-blue">
-                      {s.firstName[0]}
+                    <span className="flex size-11 items-center justify-center rounded-2xl bg-[#dbe7fb] text-[#1d4e89]">
+                      <IconUsers size={20} />
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-text">
-                        {s.firstName} {s.lastName}
-                      </p>
-                      <p className="text-xs text-text-secondary">
-                        {s.beltName} · {Math.round(s.progressPercent)}% к аттестации
-                      </p>
-                      <div className="mt-2 lg:hidden">
-                        <ProgressBar value={s.progressPercent} showPercent={false} variant="green" />
-                      </div>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold text-text">{group.name}</span>
+                      <span className="mt-0.5 block text-sm text-text-secondary">
+                        {group.studentCount} {plural(group.studentCount, 'ученик', 'ученика', 'учеников')}
+                      </span>
+                    </span>
+                    <IconArrowRight size={16} className="text-text-muted" />
+                  </Link>
+                ))
+              )}
+            </section>
+          ) : (
+            <section className="mt-5" aria-label={range === 'today' ? 'Занятия сегодня' : 'Занятия недели'}>
+              {range === 'today' && (
+                <h2 className="text-sm font-semibold text-text-secondary">{formatDay(todayIso)}</h2>
+              )}
+              {visibleClasses.length === 0 ? (
+                <p className="mt-3 rounded-2xl bg-white px-4 py-6 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                  {range === 'today' ? 'Сегодня занятий нет' : 'На этой неделе занятий нет'}
+                </p>
+              ) : (
+                <div className="mt-3 space-y-5">
+                  {Object.keys(classesByDate).map((date) => (
+                    <div key={date}>
+                      {range === 'week' && (
+                        <h2 className="mb-3 text-sm font-semibold text-text-secondary">{formatDay(date)}</h2>
+                      )}
+                      <ul className="space-y-3">
+                        {classesByDate[date].map((event, index) => {
+                          const session = attendance[classKey(event)]
+                          const total = event.studentCount
+                          const upcomingClass = event.upcoming
+                          const marked = !upcomingClass && Boolean(session?.sessionId)
+                          const present = upcomingClass
+                            ? parentWillAttendCount(session)
+                            : marked
+                              ? session!.entries.filter((entry) => entry.status !== 'ABSENT').length
+                              : 0
+                          const percent = total > 0 ? Math.round((present / total) * 100) : 0
+                          const tone = tones[index % tones.length]
+                          return (
+                            <li key={classKey(event)}>
+                              <Link
+                                to={attendanceLink(event)}
+                                className="block rounded-[1.25rem] bg-white px-4 py-4 shadow-[var(--shadow-card)] transition active:scale-[0.99]"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${tone.tile}`}>
+                                    <IconUsers size={20} />
+                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <p className="text-sm font-semibold text-text">{timeRange(event)}</p>
+                                      <p className="shrink-0 text-sm font-semibold text-text">
+                                        {upcomingClass || marked ? `${present} / ${total}` : total}
+                                      </p>
+                                    </div>
+                                    <p className="mt-0.5 font-semibold text-text">{event.groupName}</p>
+                                    <p className="text-sm text-text-secondary">{event.location || 'Зал клуба'}</p>
+                                    <div className="mt-3">
+                                      <div
+                                        className="h-1.5 overflow-hidden rounded-full bg-[#e7f6ee]"
+                                        role="progressbar"
+                                        aria-valuenow={percent}
+                                        aria-valuemin={0}
+                                        aria-valuemax={100}
+                                        aria-label={
+                                          upcomingClass
+                                            ? `Будут ${present} из ${total} по ответам родителей`
+                                            : marked
+                                              ? `Присутствуют ${present} из ${total}`
+                                              : 'Посещаемость не отмечена'
+                                        }
+                                      >
+                                        <div className="h-full rounded-full bg-[#3dae6b]" style={{ width: `${percent}%` }} />
+                                      </div>
+                                      <p className="mt-1.5 text-xs text-text-muted">
+                                        {upcomingClass ? 'будут (родители)' : marked ? 'присутствуют' : 'ещё не отмечено'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </ul>
                     </div>
-                    <span className={`badge ${ui.className.includes('d94b55') ? 'badge-error' : ui.className.includes('d7a62a') ? 'badge-warning' : 'badge-success'}`}>
-                      {ui.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {(dashboard.birthdayStudents ?? []).length > 0 && (
-            <div className="card p-5 lg:p-6">
-              <h2 className="section-title mb-3">Дни рождения ({dashboard.upcomingBirthdays})</h2>
-              <ul className="grid gap-2 sm:grid-cols-2">
-                {dashboard.birthdayStudents.map((s) => (
-                  <li key={s.id} className="flex items-center gap-2 rounded-xl bg-surface-muted px-3 py-2 text-sm">
-                    <span>🎁</span>
-                    <span className="font-medium text-text">
-                      {s.firstName} {s.lastName}
-                    </span>
-                    <span className="text-text-muted">· {s.age} лет</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  ))}
+                </div>
+              )}
+            </section>
           )}
 
-          <div className="max-w-sm lg:hidden">
-            <LogoutButton />
-          </div>
+          <section className="mt-8" aria-labelledby="attention-title">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 id="attention-title" className="text-base font-bold text-text">
+                Что требует внимания
+              </h2>
+              <Link to="/coach/attendance" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-text-secondary">
+                Все
+                <IconArrowRight size={14} />
+              </Link>
+            </div>
+            <ul className="space-y-2">
+              {pendingPayments > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => void sendReminders()}
+                    className="flex w-full items-center gap-3 rounded-[1.25rem] bg-white px-4 py-3 text-left shadow-[var(--shadow-card)] transition active:scale-[0.99]"
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-xl bg-[#fde8e8] text-[#d94b55]">
+                      <IconClipboard size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-medium text-text">
+                      {pendingPayments} {plural(pendingPayments, 'задолженность', 'задолженности', 'задолженностей')}
+                    </span>
+                    <IconArrowRight size={16} className="text-text-muted" />
+                  </button>
+                </li>
+              )}
+              {unmarkedStudents > 0 && (
+                <li>
+                  <Link
+                    to="/coach/attendance"
+                    className="flex items-center gap-3 rounded-[1.25rem] bg-white px-4 py-3 shadow-[var(--shadow-card)]"
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-xl bg-[#fff4d6] text-[#b8860b]">
+                      <IconUsers size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-medium text-text">
+                      {unmarkedStudents}{' '}
+                      {plural(unmarkedStudents, 'спортсмен не отметился', 'спортсмена не отметились', 'спортсменов не отметились')}
+                    </span>
+                    <IconArrowRight size={16} className="text-text-muted" />
+                  </Link>
+                </li>
+              )}
+              {pendingRsvps > 0 && (
+                <li>
+                  <Link
+                    to="/coach/competitions"
+                    className="flex items-center gap-3 rounded-[1.25rem] bg-white px-4 py-3 shadow-[var(--shadow-card)]"
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-xl bg-[#dbe7fb] text-[#1d4e89]">
+                      <IconTrophy size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-medium text-text">
+                      {pendingRsvps} {plural(pendingRsvps, 'заявка ожидает подтверждения', 'заявки ожидают подтверждения', 'заявок ожидают подтверждения')}
+                    </span>
+                    <IconArrowRight size={16} className="text-text-muted" />
+                  </Link>
+                </li>
+              )}
+              {pendingPayments === 0 && unmarkedStudents === 0 && pendingRsvps === 0 && (
+                <li className="rounded-[1.25rem] bg-white px-4 py-4 text-sm text-text-secondary shadow-[var(--shadow-card)]">
+                  Сейчас всё спокойно
+                </li>
+              )}
+            </ul>
+          </section>
         </>
       )}
-    </CoachPageShell>
+    </div>
   )
 }

@@ -1,27 +1,32 @@
+import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { SkipLink } from '../components/a11y/SkipLink'
+import { LogoutButton } from '../components/auth/LogoutButton'
+import { CoachBeltSettingsSheet } from '../components/coach/CoachBeltSettingsSheet'
+import { CoachCreateSheet } from '../components/coach/CoachCreateSheet'
 import { CoachMobileNav } from '../components/coach/CoachMobileNav'
 import { CoachSidebar } from '../components/coach/CoachSidebar'
 import { BrandMark } from '../components/ui/BrandMark'
-import { LogoutButton } from '../components/auth/LogoutButton'
 import { useAuth } from '../context/AuthContext'
 
 export function CoachLayout() {
   const { user } = useAuth()
   const { pathname } = useLocation()
   const isSecretPage = pathname.endsWith('/secret')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [beltSettingsOpen, setBeltSettingsOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-[#f6f4ef]">
       <SkipLink />
-      <header className={`sticky top-0 z-40 border-b border-white/10 bg-navy-950 ${isSecretPage ? 'hidden lg:block' : ''}`}>
+      <header className="sticky top-0 z-40 hidden border-b border-white/10 bg-navy-950 lg:block">
         <div className="flex h-16 items-center justify-between px-5 lg:px-8">
           <Link to="/" className="flex items-center gap-3" aria-label="Karate Hub, на главную">
             <BrandMark variant="coach" size="sm" />
-            <span className="hidden text-sm font-semibold text-white sm:inline">Кабинет тренера</span>
+            <span className="text-sm font-semibold text-white">Кабинет тренера</span>
           </Link>
           <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
+            <div className="text-right">
               <p className="text-sm font-medium text-white">{user?.name}</p>
               <p className="text-xs text-white/80">Главный тренер</p>
             </div>
@@ -30,13 +35,13 @@ export function CoachLayout() {
         </div>
       </header>
 
-      <div className={`flex ${isSecretPage ? 'min-h-screen lg:min-h-[calc(100vh-4rem)]' : 'min-h-[calc(100vh-4rem)]'}`}>
-        <CoachSidebar />
+      <div className={`flex min-h-screen lg:min-h-[calc(100vh-4rem)]`}>
+        <CoachSidebar onCreate={() => setCreateOpen(true)} />
         <main
           id="main-content"
           tabIndex={-1}
-          className={`flex-1 overflow-x-hidden overflow-y-auto outline-none lg:pb-0 ${
-            isSecretPage ? 'bg-[#f5f4f1] pb-[5.75rem]' : 'pb-[5.75rem]'
+          className={`flex-1 overflow-x-hidden overflow-y-auto bg-[#f6f4ef] pb-40 outline-none lg:pb-0 ${
+            isSecretPage ? 'bg-[#f5f4f1]' : ''
           }`}
         >
           <div key={pathname} className="page-transition">
@@ -45,7 +50,13 @@ export function CoachLayout() {
         </main>
       </div>
 
-      <CoachMobileNav />
+      <CoachMobileNav createOpen={createOpen} onToggleCreate={() => setCreateOpen((open) => !open)} />
+      <CoachCreateSheet
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onOpenBeltSettings={() => setBeltSettingsOpen(true)}
+      />
+      <CoachBeltSettingsSheet open={beltSettingsOpen} onClose={() => setBeltSettingsOpen(false)} />
     </div>
   )
 }

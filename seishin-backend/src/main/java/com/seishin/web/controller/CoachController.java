@@ -103,6 +103,23 @@ public class CoachController {
         return ResponseEntity.ok(beltService.listBeltLadder(SecurityUtils.requireCoach()));
     }
 
+    @GetMapping("/belts/settings")
+    public ResponseEntity<BeltSettingsDto> beltSettings() {
+        return ResponseEntity.ok(beltService.getSettings(SecurityUtils.requireCoach()));
+    }
+
+    @PutMapping("/belts/settings")
+    public ResponseEntity<BeltSettingsDto> updateBeltSettings(@Valid @RequestBody BeltSettingsDto dto) {
+        return ResponseEntity.ok(beltService.updateSettings(SecurityUtils.requireCoach(), dto));
+    }
+
+    @PatchMapping("/belts/{beltLevelId}")
+    public ResponseEntity<BeltService.BeltLevelDto> updateBeltLevel(
+            @PathVariable Long beltLevelId,
+            @Valid @RequestBody UpdateBeltLevelDto dto) {
+        return ResponseEntity.ok(beltService.updateLevel(SecurityUtils.requireCoach(), beltLevelId, dto));
+    }
+
     @GetMapping("/schedule")
     public ResponseEntity<List<ScheduleSlotDto>> listSchedule() {
         return ResponseEntity.ok(scheduleService.listSchedule(SecurityUtils.requireCoach()));

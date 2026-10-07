@@ -1,0 +1,10 @@
+---
+description: Ссылка на полную базу знаний Karate Hub
+alwaysApply: false
+---
+
+# База знаний
+
+Перед крупными задачами читай **`docs/PROJECT_KNOWLEDGE.md`**: продукт, безопасность, сущности, маршруты фронта, API, чеклисты.
+
+Детали API — `seishin-backend/README.md`. Бэкенд/фронт в коде — правила `backend.mdc` и `frontend.mdc`.

@@ -24,7 +24,10 @@ export function getStoredToken(): string | null {
   }
 }
 
-const AUTH_PATH_PREFIX = '/api/auth/'
+const PUBLIC_AUTH_PATHS = new Set([
+  '/api/auth/register',
+  '/api/auth/login',
+])
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getStoredToken()
@@ -32,7 +35,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (!headers.has('Content-Type') && options.body) {
     headers.set('Content-Type', 'application/json')
   }
-  if (token && !path.startsWith(AUTH_PATH_PREFIX)) {
+  if (token && !PUBLIC_AUTH_PATHS.has(path)) {
     headers.set('Authorization', `Bearer ${token}`)
   }
 

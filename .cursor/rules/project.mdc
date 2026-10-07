@@ -1,0 +1,30 @@
+---
+description: Архитектура Karate Hub, роли и локальный запуск
+alwaysApply: true
+---
+
+# Karate Hub (Seishin)
+
+Приложение секции каратэ: кабинет тренера и дневник родителя. Интерфейс на русском.
+
+Полная база знаний: `docs/PROJECT_KNOWLEDGE.md`.
+
+## Где что лежит
+
+- `seishin-app` — React 19, TypeScript, Vite, Tailwind CSS v4, React Router 7. Тот же код собирается в APK через Capacitor 7. Сборка APK описана в `seishin-app/MOBILE.md`.
+- `seishin-backend` — Spring Boot, Gradle, H2 in-memory в режиме PostgreSQL. Пакет `com.seishin`: `domain`, `repository`, `service`, `web`, `security`, `config`, `seed`.
+- `npm run build` пишет SPA в `seishin-backend/src/main/resources/static` (`emptyOutDir: true`). Spring отдаёт эту статику. `SpaForwardController` отдаёт `index.html` на клиентские маршруты.
+- Docker пересобирает фронт сам и игнорирует закоммиченный `static/`.
+
+## Запуск
+
+- Бэкенд: в `seishin-backend` выполнить `gradlew.bat bootRun` — http://localhost:8080. H2-консоль: `/h2-console`, JDBC `jdbc:h2:mem:seishin`, user `sa`, пароль пустой.
+- Фронт: в `seishin-app` выполнить `npm run dev` — http://localhost:5173. Vite проксирует `/api` на 8080.
+- Демо-вход по логину и паролю: тренер `coach` / `coach123` (Алексей Орлов), родитель `parent` / `parent123`. Пароль хранится как BCrypt-хеш.
+
+## Роли и доступ
+
+- Роли: `COACH` и `PARENT`. JWT лежит в `localStorage` под ключом `seishin-auth`. Заголовок: `Authorization: Bearer`.
+- `/api/coach/**` — только `COACH`, `/api/parent/**` — только `PARENT`. Контроллеры ещё раз проверяют роль через `SecurityUtils.requireCoach()` и `requireParent()`.
+- Путь под `/api`, которого нет в `SecurityConfig`, станет публичным: там стоит `anyRequest().permitAll()`. Новый API сразу добавлять в матчеры.
+- Тренер видит группу, только если он владелец или ассистент того же клуба (`CoachAccessService`). Родитель видит ребёнка только через `ParentStudentLink` (`ParentAccessService`).

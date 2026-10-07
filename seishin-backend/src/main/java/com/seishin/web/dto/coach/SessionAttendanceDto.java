@@ -1,6 +1,7 @@
 package com.seishin.web.dto.coach;
 
 import com.seishin.domain.enums.AttendanceStatus;
+import com.seishin.domain.enums.RsvpStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -23,5 +24,7 @@ public class SessionAttendanceDto {
         private Long studentId;
         private String studentName;
         private AttendanceStatus status;
+        /** Ответ родителя на ближайшую тренировку (если есть для этой даты/времени). */
+        private RsvpStatus parentIntent;
     }
 }

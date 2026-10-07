@@ -3,11 +3,12 @@ import type { FormEvent } from 'react'
 import { coachApi } from '../../api/coach'
 import type { BadgeDefinition, BeltLevel, StudentSummary } from '../../api/types'
 import { ApiError } from '../../api/client'
-import { CoachHero } from '../../components/coach/CoachHero'
+import { CoachBeltSettingsPanel } from '../../components/coach/CoachBeltSettingsPanel'
 import { CoachPageShell } from '../../components/coach/CoachPageShell'
 import { CoachLoading } from '../../components/coach/CoachScreenState'
 import { ProgressBar } from '../../components/ui/ProgressBar'
 import { StatCard } from '../../components/ui/StatCard'
+import { beltNextDisplayName, beltProgressValue, beltShowsPercent } from '../../utils/beltProgress'
 
 export function CoachAwardsPage() {
   const [students, setStudents] = useState<StudentSummary[]>([])
@@ -19,7 +20,15 @@ export function CoachAwardsPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const reloadStudentsAndBelts = () => {
+    return Promise.all([coachApi.students(), coachApi.belts()]).then(([s, bl]) => {
+      setStudents(s)
+      setBelts(bl)
+    })
+  }
+
   useEffect(() => {
+    setLoading(true)
     Promise.all([coachApi.students(), coachApi.badges(), coachApi.belts()])
       .then(([s, b, bl]) => {
         setStudents(s)
@@ -35,6 +44,7 @@ export function CoachAwardsPage() {
     if (!studentId) return
     try {
       await coachApi.issueBadge(Number(studentId), badgeId, note || undefined)
+      await reloadStudentsAndBelts()
       setMessage('Значок выдан — родитель увидит в дневнике')
     } catch (e) {
       setMessage(e instanceof ApiError ? e.message : 'Ошибка')
@@ -54,28 +64,11 @@ export function CoachAwardsPage() {
   }
 
   const selected = students.find((s) => s.id === studentId)
-  const earnedBadges = badges.length
 
   return (
     <CoachPageShell
       title="Награды"
-      subtitle="Выдача значков и назначение пояса ученику"
-      hero={
-        <CoachHero eyebrow="Кабинет" title="Награды" subtitle="Значки и пояса">
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            {[
-              { value: students.length, label: 'учеников' },
-              { value: earnedBadges, label: 'значков' },
-              { value: belts.length, label: 'поясов' },
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/10 px-2 py-3 text-center">
-                <p className="text-xl font-extrabold text-white">{loading ? '—' : stat.value}</p>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/60">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </CoachHero>
-      }
+      subtitle="Правила поясов, значки и ручное назначение уровня"
     >
       {loading ? (
         <CoachLoading />
@@ -83,11 +76,18 @@ export function CoachAwardsPage() {
         <>
           {message && <p className="alert-success">{message}</p>}
 
-          <div className="hidden gap-4 sm:grid sm:grid-cols-3 lg:grid">
+          <div className="grid gap-4 sm:grid-cols-3">
             <StatCard label="Учеников" value={students.length} accent="blue" />
             <StatCard label="Значков" value={badges.length} accent="green" />
             <StatCard label="Поясов" value={belts.length} accent="amber" />
           </div>
+
+          <section className="card p-6">
+            <h2 className="section-title">Как присваиваются пояса</h2>
+            <div className="mt-4">
+              <CoachBeltSettingsPanel onSaved={() => void reloadStudentsAndBelts()} />
+            </div>
+          </section>
 
           <div className="card max-w-lg p-6">
             <label className="label">Ученик</label>
@@ -103,8 +103,22 @@ export function CoachAwardsPage() {
               ))}
             </select>
             {selected && (
-              <div className="mt-4">
-                <ProgressBar value={selected.progressPercent} label="Прогресс к аттестации" />
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-text-secondary">{selected.progressLabel}</p>
+                {beltShowsPercent(selected) ? (
+                  <ProgressBar
+                    value={beltProgressValue(selected)}
+                    label={
+                      selected.beltAssignmentMode === 'ATTENDANCE' && selected.sessionsRequired
+                        ? `${selected.sessionsCompleted ?? 0} / ${selected.sessionsRequired} занятий`
+                        : `Прогресс до ${beltNextDisplayName(selected)}`
+                    }
+                  />
+                ) : (
+                  <p className="rounded-lg bg-surface-muted px-3 py-2 text-sm text-text-secondary">
+                    Автоматический прогресс отключён — назначайте пояс вручную ниже.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -119,7 +133,10 @@ export function CoachAwardsPage() {
             />
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {badges.map((badge) => (
-                <div key={badge.id} className="rounded-xl border border-border-light bg-surface-muted p-5 transition hover:border-brand-blue/30">
+                <div
+                  key={badge.id}
+                  className="rounded-xl border border-border-light bg-surface-muted p-5 transition hover:border-brand-blue/30"
+                >
                   <p className="font-semibold text-text">{badge.name}</p>
                   <p className="mt-1.5 text-sm text-text-secondary">{badge.description}</p>
                   <button
@@ -151,7 +168,9 @@ export function CoachAwardsPage() {
                   ))}
                 </select>
               </div>
-              <button type="submit" className="btn-coach">Назначить пояс</button>
+              <button type="submit" className="btn-coach">
+                Назначить пояс
+              </button>
             </form>
             <div className="mt-6 flex flex-wrap gap-2">
               {belts.map((b) => (

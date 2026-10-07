@@ -41,6 +41,19 @@ export function attendanceDayClass(status: 'PRESENT' | 'ABSENT' | 'MAKEUP' | 'GU
   return 'bg-[#e8f7ef] text-[#20a464]'
 }
 
+export function parentTrainingIntentLabel(intent: 'CONFIRMED' | 'DECLINED' | 'PENDING' | null | undefined) {
+  switch (intent) {
+    case 'CONFIRMED':
+      return { label: 'Будет', className: 'bg-[#e8f7ef] text-[#1f7a4d]' }
+    case 'DECLINED':
+      return { label: 'Не будет', className: 'bg-[#fff0f1] text-[#d94b55]' }
+    case 'PENDING':
+      return { label: 'Не ответил', className: 'bg-surface-muted text-text-muted' }
+    default:
+      return { label: 'Нет отметки', className: 'bg-surface-muted text-text-muted' }
+  }
+}
+
 export function attendanceStatusLabel(status: 'PRESENT' | 'ABSENT' | 'MAKEUP' | 'GUEST') {
   switch (status) {
     case 'PRESENT':

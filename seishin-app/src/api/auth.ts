@@ -1,27 +1,60 @@
 import type { AuthResponse, UserRole } from './types'
 import { apiFetch } from './client'
 
+export type LinkedChild = {
+  message: string
+  studentId: number
+  studentName: string
+  age?: number
+  clubName?: string
+  groupName?: string
+}
+
+export type InviteLookup = {
+  kind: 'CLUB' | 'STUDENT'
+  clubName: string
+  studentName?: string
+}
+
 export const authApi = {
-  register: (payload: { firstName: string; lastName: string; phone: string; role: UserRole }) =>
-    apiFetch<{ message: string; expiresInMinutes: string }>('/api/auth/register', {
+  register: (payload: {
+    firstName: string
+    lastName?: string
+    login: string
+    password: string
+    role: UserRole
+    clubName?: string
+  }) =>
+    apiFetch<AuthResponse>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  requestOtp: (phone: string, role: UserRole) =>
-    apiFetch<{ message: string; expiresInMinutes: string }>('/api/auth/otp/request', {
+  login: (login: string, password: string, role: UserRole) =>
+    apiFetch<AuthResponse>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ phone, role }),
+      body: JSON.stringify({ login, password, role }),
     }),
 
-  verifyOtp: (phone: string, code: string, role: UserRole) =>
-    apiFetch<AuthResponse>('/api/auth/otp/verify', {
+  completeProfile: (payload: {
+    email?: string
+    birthDate?: string
+    experienceYears?: number
+    karateStyle?: string
+  }) =>
+    apiFetch<void>('/api/auth/profile', {
       method: 'POST',
-      body: JSON.stringify({ phone, code, role }),
+      body: JSON.stringify(payload),
+    }),
+
+  lookupInvite: (code: string) =>
+    apiFetch<InviteLookup>('/api/auth/invite/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
     }),
 
   linkChild: (code: string) =>
-    apiFetch<{ message: string; studentId: number; studentName: string }>('/api/auth/invite/link', {
+    apiFetch<LinkedChild>('/api/auth/invite/link', {
       method: 'POST',
       body: JSON.stringify({ code }),
     }),

@@ -7,6 +7,7 @@ import com.seishin.domain.entity.ParentStudentLink;
 import com.seishin.domain.entity.User;
 import com.seishin.domain.enums.Role;
 import com.seishin.repository.ClubRepository;
+import com.seishin.repository.GroupStudentRepository;
 import com.seishin.repository.InviteCodeRepository;
 import com.seishin.repository.OtpTokenRepository;
 import com.seishin.repository.ParentStudentLinkRepository;
@@ -14,7 +15,9 @@ import com.seishin.repository.UserRepository;
 import com.seishin.security.JwtTokenProvider;
 import com.seishin.security.UserPrincipal;
 import com.seishin.web.dto.auth.AuthResponseDto;
+import com.seishin.web.dto.auth.CompleteProfileDto;
 import com.seishin.web.dto.auth.InviteLinkDto;
+import com.seishin.web.dto.auth.LoginDto;
 import com.seishin.web.dto.auth.OtpRequestDto;
 import com.seishin.web.dto.auth.OtpVerifyDto;
 import com.seishin.web.dto.auth.RegisterDto;
@@ -24,11 +27,13 @@ import com.seishin.web.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -41,7 +46,9 @@ public class AuthService {
     private final OtpTokenRepository otpTokenRepository;
     private final InviteCodeRepository inviteCodeRepository;
     private final ParentStudentLinkRepository parentStudentLinkRepository;
+    private final GroupStudentRepository groupStudentRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${seishin.otp.ttl-minutes:5}")
     private int otpTtlMinutes;
@@ -50,22 +57,57 @@ public class AuthService {
     private String devOtpCode;
 
     @Transactional
-    public Map<String, String> register(RegisterDto dto) {
-        if (userRepository.findByPhone(dto.getPhone()).isPresent()) {
-            throw new BadRequestException("Этот номер уже зарегистрирован");
+    public AuthResponseDto register(RegisterDto dto) {
+        String login = normalizeLogin(dto.getLogin());
+        if (userRepository.findByLogin(login).isPresent()) {
+            throw new BadRequestException("Этот логин уже занят");
         }
-        String name = dto.getFirstName().trim() + " " + dto.getLastName().trim();
-        Club club = dto.getRole() == Role.COACH ? resolveCoachClub() : null;
-        userRepository.save(User.builder()
-                .phone(dto.getPhone())
+        String first = dto.getFirstName().trim();
+        String last = dto.getLastName() == null ? "" : dto.getLastName().trim();
+        String name;
+        Club club = null;
+        if (dto.getRole() == Role.COACH) {
+            if (last.isEmpty()) {
+                throw new BadRequestException("Укажите фамилию");
+            }
+            name = first + " " + last;
+            club = resolveCoachClub(dto.getClubName());
+        } else {
+            name = last.isEmpty() ? first : first + " " + last;
+        }
+        User user = userRepository.save(User.builder()
+                .login(login)
+                .passwordHash(passwordEncoder.encode(dto.getPassword()))
                 .role(dto.getRole())
                 .name(name)
                 .club(club)
                 .build());
-        issueOtp(dto.getPhone(), dto.getRole());
-        return Map.of(
-                "message", "Аккаунт создан. OTP отправлен (тестовый код: " + devOtpCode + ")",
-                "expiresInMinutes", String.valueOf(otpTtlMinutes));
+        return buildAuthResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponseDto login(LoginDto dto) {
+        User user = userRepository.findByLogin(normalizeLogin(dto.getLogin()))
+                .orElseThrow(() -> new UnauthorizedException("Неверный логин или пароль"));
+        if (user.getRole() != dto.getRole()) {
+            throw new BadRequestException("Роль не совпадает с учётной записью");
+        }
+        if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
+            throw new UnauthorizedException("Неверный логин или пароль");
+        }
+        return buildAuthResponse(user);
+    }
+
+    private String normalizeLogin(String login) {
+        return login.trim().toLowerCase();
+    }
+
+    private String normalizeInviteCode(String raw) {
+        String code = raw == null ? "" : raw.trim();
+        if (!code.matches("\\d{6}")) {
+            throw new BadRequestException("Код — 6 цифр");
+        }
+        return code;
     }
 
     @Transactional
@@ -93,10 +135,38 @@ public class AuthService {
         log.info("[MOCK SMS OTP] phone={} role={} code={}", phone, role, devOtpCode);
     }
 
-    private Club resolveCoachClub() {
+    private Club resolveCoachClub(String clubName) {
+        if (clubName != null && !clubName.isBlank()) {
+            String name = clubName.trim();
+            return clubRepository.findByName(name)
+                    .orElseGet(() -> clubRepository.save(Club.builder().name(name).build()));
+        }
         return clubRepository.findByName("Karate Hub")
                 .or(() -> clubRepository.findAll().stream().findFirst())
                 .orElseGet(() -> clubRepository.save(Club.builder().name("Karate Hub").build()));
+    }
+
+    @Transactional
+    public void completeCoachProfile(UserPrincipal principal, CompleteProfileDto dto) {
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            String email = dto.getEmail().trim();
+            if (!email.contains("@")) {
+                throw new BadRequestException("Укажите корректный email");
+            }
+            user.setEmail(email);
+        }
+        if (dto.getBirthDate() != null) {
+            user.setBirthDate(dto.getBirthDate());
+        }
+        if (dto.getExperienceYears() != null) {
+            user.setCoachExperienceYears(dto.getExperienceYears());
+        }
+        if (dto.getKarateStyle() != null && !dto.getKarateStyle().isBlank()) {
+            user.setKarateStyle(dto.getKarateStyle().trim());
+        }
+        userRepository.save(user);
     }
 
     @Transactional
@@ -116,9 +186,39 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, Object> lookupInvite(InviteLinkDto dto) {
+        String code = normalizeInviteCode(dto.getCode());
+        Club club = clubRepository.findByJoinCode(code).orElse(null);
+        if (club != null) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("kind", "CLUB");
+            body.put("clubName", club.getName());
+            return body;
+        }
+        InviteCode invite = inviteCodeRepository.findByCodeAndActiveTrue(code)
+                .orElseThrow(() -> new BadRequestException("Неверный код"));
+        if (invite.getExpiresAt().isBefore(Instant.now())) {
+            throw new BadRequestException("Код приглашения истёк");
+        }
+        Map<String, Object> body = new HashMap<>();
+        body.put("clubName", invite.getClub().getName());
+        if (invite.getStudent() == null) {
+            body.put("kind", "CLUB");
+            return body;
+        }
+        body.put("kind", "STUDENT");
+        body.put("studentName", invite.getStudent().getFirstName() + " " + invite.getStudent().getLastName());
+        return body;
+    }
+
     @Transactional
     public Map<String, Object> linkByInvite(UserPrincipal parent, InviteLinkDto dto) {
-        InviteCode invite = inviteCodeRepository.findByCodeAndActiveTrue(dto.getCode())
+        String code = normalizeInviteCode(dto.getCode());
+        if (clubRepository.findByJoinCode(code).isPresent()) {
+            throw new BadRequestException("Это код клуба — укажите данные ребёнка");
+        }
+        InviteCode invite = inviteCodeRepository.findByCodeAndActiveTrue(code)
                 .orElseThrow(() -> new BadRequestException("Неверный или использованный код"));
         if (invite.getExpiresAt().isBefore(Instant.now())) {
             throw new BadRequestException("Код приглашения истёк");
@@ -129,19 +229,29 @@ public class AuthService {
         if (parentStudentLinkRepository.existsByParentIdAndStudentId(parent.getId(), invite.getStudent().getId())) {
             throw new BadRequestException("Ребёнок уже привязан");
         }
+        var student = invite.getStudent();
         parentStudentLinkRepository.save(ParentStudentLink.builder()
                 .parent(userRepository.getReferenceById(parent.getId()))
-                .student(invite.getStudent())
+                .student(student)
                 .build());
         invite.setUsedAt(Instant.now());
         invite.setUsedByParent(userRepository.getReferenceById(parent.getId()));
         invite.setActive(false);
         inviteCodeRepository.save(invite);
-        return Map.of(
-                "message", "Ребёнок успешно привязан",
-                "studentId", invite.getStudent().getId(),
-                "studentName", invite.getStudent().getFirstName() + " " + invite.getStudent().getLastName()
-        );
+        String groupName = groupStudentRepository.findByStudentId(student.getId()).stream()
+                .findFirst()
+                .map(link -> link.getGroup().getName())
+                .orElse(null);
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", "Ребёнок успешно привязан");
+        body.put("studentId", student.getId());
+        body.put("studentName", student.getFirstName() + " " + student.getLastName());
+        body.put("age", AgeCalculator.age(student.getBirthDate()));
+        body.put("clubName", student.getClub().getName());
+        if (groupName != null) {
+            body.put("groupName", groupName);
+        }
+        return body;
     }
 
     private AuthResponseDto buildAuthResponse(User user) {
@@ -149,6 +259,7 @@ public class AuthService {
                 .token(jwtTokenProvider.createToken(user))
                 .userId(user.getId())
                 .name(user.getName())
+                .login(user.getLogin())
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .clubId(user.getClub() != null ? user.getClub().getId() : null)

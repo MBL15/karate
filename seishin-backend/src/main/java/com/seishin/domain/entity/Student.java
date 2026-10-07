@@ -3,6 +3,7 @@ package com.seishin.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
@@ -34,6 +35,9 @@ public class Student {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "belt_level_id")
     private BeltLevel beltLevel;
+
+    /** Когда ученику присвоен текущий пояс (для подсчёта посещений). */
+    private Instant beltAssignedAt;
 
     @Column(nullable = false)
     @Builder.Default

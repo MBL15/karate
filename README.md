@@ -23,7 +23,10 @@ npm install
 npm run dev
 ```
 
-Откройте http://localhost:5173
+Откройте http://localhost:5173. Vite проксирует `/api` на порт 8080.
+
+**База знаний проекта:** [docs/PROJECT_KNOWLEDGE.md](docs/PROJECT_KNOWLEDGE.md) (архитектура, модель данных, маршруты, чеклисты).  
+Краткие правила для Cursor — `.cursor/rules/`. Список HTTP-методов — [seishin-backend/README.md](seishin-backend/README.md).
 
 ## Сборка APK
 

@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -44,6 +45,7 @@ public class CoachService {
     private final StudentMapper studentMapper;
     private final ProgressService progressService;
     private final ScheduleService scheduleService;
+    private final StudentTrainingIntentRepository trainingIntentRepository;
 
     @Value("${seishin.invite.ttl-hours:24}")
     private int inviteTtlHours;
@@ -65,7 +67,13 @@ public class CoachService {
                 .count();
         int pendingRsvps = (int) registrationRepository.countByCompetition_Club_IdAndRsvpStatus(clubId, RsvpStatus.PENDING);
 
+        Club club = clubId == null ? null : clubRepository.findById(clubId).orElse(null);
+        String clubName = club != null ? club.getName() : "Клуб";
+        String joinCode = club != null ? ensureJoinCode(club) : null;
+
         return CoachDashboardDto.builder()
+                .clubName(clubName)
+                .joinCode(joinCode)
                 .totalStudents(students.size())
                 .totalGroups(groups.size())
                 .upcomingBirthdays(birthdays.size())
@@ -100,10 +108,12 @@ public class CoachService {
                 .lastName(dto.getLastName())
                 .birthDate(dto.getBirthDate())
                 .beltLevel(belt)
+                .beltAssignedAt(Instant.now())
                 .guest(dto.isGuest())
                 .progressPercent(0)
                 .build();
         student = studentRepository.save(student);
+        progressService.recalculateProgress(student.getId());
         if (dto.getGroupId() != null) {
             TrainingGroup group = coachAccessService.requireGroupAccess(coach, dto.getGroupId());
             groupStudentRepository.save(GroupStudent.builder().group(group).student(student).build());
@@ -154,9 +164,11 @@ public class CoachService {
             throw new BadRequestException("Пояс другого клуба");
         }
         student.setBeltLevel(belt);
+        student.setBeltAssignedAt(Instant.now());
+        student.setProgressPercent(0);
         student = studentRepository.save(student);
         progressService.recalculateProgress(student.getId());
-        return studentMapper.toSummary(student);
+        return studentMapper.toSummary(studentRepository.findById(student.getId()).orElseThrow());
     }
 
     @Transactional
@@ -189,11 +201,17 @@ public class CoachService {
                 .orElse(java.util.Map.of());
 
         var entries = students.stream()
-                .map(student -> SessionAttendanceDto.EntryDto.builder()
-                        .studentId(student.getId())
-                        .studentName(student.getFirstName() + " " + student.getLastName())
-                        .status(recordsByStudent.getOrDefault(student.getId(), AttendanceStatus.PRESENT))
-                        .build())
+                .map(student -> {
+                    var intent = trainingIntentRepository.findByStudentIdAndGroupIdAndSessionDateAndStartTime(
+                            student.getId(), groupId, sessionDate, startTime);
+                    AttendanceStatus status = recordsByStudent.getOrDefault(student.getId(), AttendanceStatus.PRESENT);
+                    return SessionAttendanceDto.EntryDto.builder()
+                            .studentId(student.getId())
+                            .studentName(student.getFirstName() + " " + student.getLastName())
+                            .status(status)
+                            .parentIntent(intent.map(StudentTrainingIntent::getStatus).orElse(null))
+                            .build();
+                })
                 .toList();
 
         return SessionAttendanceDto.builder()
@@ -207,6 +225,10 @@ public class CoachService {
 
     @Transactional
     public void recordBulkAttendance(UserPrincipal coach, BulkAttendanceDto dto) {
+        if (isUpcomingSession(dto.getSessionDate(), dto.getStartTime())) {
+            throw new BadRequestException(
+                    "До начала занятия доступны только ответы родителей — факт посещаемости отмечается после занятия");
+        }
         TrainingGroup group = coachAccessService.requireGroupAccess(coach, dto.getGroupId());
         TrainingSession session = sessionRepository
                 .findByGroupIdAndSessionDateAndStartTime(group.getId(), dto.getSessionDate(), dto.getStartTime())
@@ -238,6 +260,17 @@ public class CoachService {
         }
     }
 
+    private static boolean isUpcomingSession(LocalDate sessionDate, LocalTime startTime) {
+        LocalDate today = LocalDate.now();
+        if (sessionDate.isAfter(today)) {
+            return true;
+        }
+        if (sessionDate.isBefore(today)) {
+            return false;
+        }
+        return startTime.isAfter(LocalTime.now());
+    }
+
     @Transactional
     public void issueBadge(UserPrincipal coach, IssueBadgeDto dto) {
         Student student = studentRepository.findById(dto.getStudentId())
@@ -266,19 +299,26 @@ public class CoachService {
             throw new BadRequestException("Тренер не привязан к клубу");
         }
 
-        Student student = null;
-        if (dto.getStudentId() != null) {
-            student = studentRepository.findById(dto.getStudentId())
-                    .orElseThrow(() -> new NotFoundException("Ученик не найден"));
-            if (!student.getClub().getId().equals(coach.getClubId())) {
-                throw new BadRequestException("Ученик другого клуба");
-            }
+        if (dto.getStudentId() == null) {
+            String code = ensureJoinCode(club);
+            return InviteCodeResponseDto.builder()
+                    .code(code)
+                    .clubName(club.getName())
+                    .kind("CLUB")
+                    .build();
+        }
+
+        Student student = studentRepository.findById(dto.getStudentId())
+                .orElseThrow(() -> new NotFoundException("Ученик не найден"));
+        if (!student.getClub().getId().equals(coach.getClubId())) {
+            throw new BadRequestException("Ученик другого клуба");
         }
 
         String code;
         do {
             code = String.format("%06d", random.nextInt(1_000_000));
-        } while (inviteCodeRepository.findByCodeAndActiveTrue(code).isPresent());
+        } while (inviteCodeRepository.findByCodeAndActiveTrue(code).isPresent()
+                || clubRepository.findByJoinCode(code).isPresent());
 
         Instant expiresAt = Instant.now().plus(inviteTtlHours, ChronoUnit.HOURS);
         InviteCode invite = InviteCode.builder()
@@ -294,11 +334,24 @@ public class CoachService {
         return InviteCodeResponseDto.builder()
                 .code(code)
                 .clubName(club.getName())
-                .studentId(student != null ? student.getId() : null)
-                .studentName(student != null ? student.getFirstName() + " " + student.getLastName() : null)
+                .studentId(student.getId())
+                .studentName(student.getFirstName() + " " + student.getLastName())
                 .expiresAt(expiresAt)
-                .kind(student != null ? "STUDENT" : "CLUB")
+                .kind("STUDENT")
                 .build();
+    }
+
+    private String ensureJoinCode(Club club) {
+        if (club.getJoinCode() != null && !club.getJoinCode().isBlank()) {
+            return club.getJoinCode();
+        }
+        String code;
+        do {
+            code = String.format("%06d", random.nextInt(1_000_000));
+        } while (clubRepository.findByJoinCode(code).isPresent()
+                || inviteCodeRepository.findByCodeAndActiveTrue(code).isPresent());
+        club.setJoinCode(code);
+        return clubRepository.save(club).getJoinCode();
     }
 
     private boolean isBirthdayWithinWeek(LocalDate birthDate, LocalDate from, LocalDate to) {

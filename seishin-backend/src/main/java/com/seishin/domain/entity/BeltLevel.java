@@ -28,4 +28,7 @@ public class BeltLevel {
 
     @Column(nullable = false)
     private int sortOrder;
+
+    /** Занятий на этом поясе до следующего; null — норма клуба. */
+    private Integer sessionsRequired;
 }

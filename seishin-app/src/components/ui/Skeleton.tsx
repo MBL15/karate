@@ -21,22 +21,6 @@ export function SkeletonCard() {
   )
 }
 
-export function SkeletonHero() {
-  return (
-    <div className="space-y-4 px-1">
-      <Skeleton className="mx-auto h-8 w-40 rounded-full" />
-      <Skeleton className="mx-auto h-10 w-48" />
-      <div className="rounded-2xl border border-border-light bg-surface p-5">
-        <div className="mb-3 flex justify-between">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-3 w-10" />
-        </div>
-        <Skeleton className="h-3 w-full rounded-full" />
-      </div>
-    </div>
-  )
-}
-
 export function SkeletonDashboard() {
   return (
     <div className="space-y-4">

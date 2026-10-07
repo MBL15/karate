@@ -12,6 +12,7 @@ import { CoachCompetitionsPage } from './pages/coach/CoachCompetitionsPage'
 import { CoachSchedulePage } from './pages/coach/CoachSchedulePage'
 import { CoachSecretPage } from './pages/coach/CoachSecretPage'
 import { CoachStudentsPage } from './pages/coach/CoachStudentsPage'
+import { CoachToolsPage } from './pages/coach/CoachToolsPage'
 import { CoachDashboard } from './pages/CoachDashboard'
 import { CompetitionInvite } from './pages/CompetitionInvite'
 import { ForCoachesPage } from './pages/ForCoachesPage'
@@ -45,6 +46,7 @@ export default function App() {
         <Route index element={<CoachDashboard />} />
         <Route path="attendance" element={<CoachAttendancePage />} />
         <Route path="students" element={<CoachStudentsPage />} />
+        <Route path="tools" element={<CoachToolsPage />} />
         <Route path="schedule" element={<CoachSchedulePage />} />
         <Route path="awards" element={<CoachAwardsPage />} />
         <Route path="competitions" element={<CoachCompetitionsPage />} />

@@ -4,9 +4,22 @@ export type AuthResponse = {
   token: string
   userId: number
   name: string
-  phone: string
+  login: string
+  phone: string | null
   role: UserRole
-  clubId: number
+  clubId: number | null
+}
+
+export type BeltAssignmentMode = 'MANUAL' | 'ATTENDANCE' | 'READINESS'
+
+export type BeltProgressMeta = {
+  beltAssignmentMode: BeltAssignmentMode
+  progressLabel: string
+  nextBeltName: string | null
+  nextBeltColor: string | null
+  sessionsCompleted: number | null
+  sessionsRequired: number | null
+  maxRank: boolean
 }
 
 export type StudentSummary = {
@@ -17,9 +30,13 @@ export type StudentSummary = {
   age: number
   beltName: string
   beltColor: string
-  progressPercent: number
+  progressPercent: number | null
   guest: boolean
-}
+  nextTrainingDate: string | null
+  nextTrainingStartTime: string | null
+  nextTrainingGroupName: string | null
+  nextTrainingIntent: 'PENDING' | 'CONFIRMED' | 'DECLINED' | null
+} & BeltProgressMeta
 
 export type ClassEvent = {
   scheduleId: number
@@ -65,10 +82,17 @@ export type SessionAttendance = {
   groupId: number
   sessionDate: string
   startTime: string
-  entries: { studentId: number; studentName: string; status: AttendanceStatus }[]
+  entries: {
+    studentId: number
+    studentName: string
+    status: AttendanceStatus
+    parentIntent?: 'PENDING' | 'CONFIRMED' | 'DECLINED' | null
+  }[]
 }
 
 export type CoachDashboard = {
+  clubName?: string
+  joinCode?: string | null
   totalStudents: number
   totalGroups: number
   upcomingBirthdays: number
@@ -91,15 +115,28 @@ export type Payment = {
   paidDate?: string | null
 }
 
+export type NextTraining = {
+  groupId: number
+  scheduleId: number
+  date: string
+  startTime: string
+  endTime: string | null
+  groupName: string
+  location: string | null
+  intentStatus: 'PENDING' | 'CONFIRMED' | 'DECLINED'
+}
+
 export type ParentChildHome = {
   studentId: number
   fullName: string
   age: number
   beltName: string
-  progressPercent: number
+  beltColor: string
+  progressPercent: number | null
   upcomingCompetitions: UpcomingCompetition[]
   recentPayments: PaymentSummary[]
-}
+  nextTraining: NextTraining | null
+} & BeltProgressMeta
 
 export type ParentChildProfile = {
   studentId: number
@@ -109,10 +146,10 @@ export type ParentChildProfile = {
   age: number
   beltName: string
   beltColor: string
-  progressPercent: number
+  progressPercent: number | null
   coachRecommendation: string | null
   clubName: string
-}
+} & BeltProgressMeta
 
 export type Achievement = {
   badgeId: number
@@ -170,6 +207,13 @@ export type BeltLevel = {
   name: string
   color: string
   sortOrder: number
+  sessionsRequired: number | null
+}
+
+export type BeltSettings = {
+  assignmentMode: BeltAssignmentMode
+  sessionsRequired: number
+  autoPromote: boolean
 }
 
 export type GroupSummary = {

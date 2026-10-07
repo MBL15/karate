@@ -7,6 +7,7 @@ import { ApiError } from '../../api/client'
 import { CoachPageShell } from '../../components/coach/CoachPageShell'
 import { CoachError, CoachLoading } from '../../components/coach/CoachScreenState'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { parentTrainingIntentLabel } from '../../utils/format'
 
 const imgStudent = '/assets/coach/avatar-student.svg'
 
@@ -111,7 +112,7 @@ export function CoachStudentsPage() {
   return (
     <CoachPageShell
       title="Ученики"
-      subtitle={`${groups.length} групп · ${totalStudents} учеников`}
+      subtitle={`${groups.length} групп · ${totalStudents} учеников · отметка на тренировку от родителей`}
       headerActions={
         <button type="button" onClick={() => setShowGroupForm(true)} className="btn-coach">
           + Новая группа
@@ -181,19 +182,27 @@ export function CoachStudentsPage() {
                           {students.length === 0 ? (
                             <p className="py-4 text-center text-sm text-text-secondary">В группе пока никого нет</p>
                           ) : (
-                            students.map((s) => (
+                            students.map((s) => {
+                              const intentUi = parentTrainingIntentLabel(s.nextTrainingIntent)
+                              return (
                               <div key={s.id} className="flex items-center gap-3 rounded-xl bg-surface-muted p-3">
                                 <img src={imgStudent} alt="" className="size-10 rounded-full bg-surface p-1" />
-                                <div className="flex-1">
+                                <div className="min-w-0 flex-1">
                                   <p className="font-semibold text-text">
                                     {s.firstName} {s.lastName}
                                   </p>
                                   <p className="text-xs text-text-secondary">
-                                    {s.age} лет · {s.beltName} · {Math.round(s.progressPercent)}%
+                                    {s.age} лет · {s.beltName}
+                                    {s.progressPercent != null ? ` · ${Math.round(s.progressPercent)}%` : ''}
                                   </p>
                                 </div>
+                                {s.nextTrainingIntent ? (
+                                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${intentUi.className}`}>
+                                    {intentUi.label}
+                                  </span>
+                                ) : null}
                               </div>
-                            ))
+                            )})
                           )}
                         </div>
 

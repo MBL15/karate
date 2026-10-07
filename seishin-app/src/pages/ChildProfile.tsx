@@ -6,13 +6,17 @@ import { ApiError } from '../api/client'
 import { ParentHero } from '../components/parent/ParentHero'
 import { ParentPageShell } from '../components/parent/ParentPageShell'
 import { ParentError, ParentLoading } from '../components/parent/ParentScreenState'
+import { ParentEmptyHint } from '../components/parent/ParentEmptyHint'
+import { useAuth } from '../context/AuthContext'
 import { useParentChild } from '../context/ParentChildContext'
 import { LogoutButton } from '../components/auth/LogoutButton'
 import { ProgressBar } from '../components/ui/ProgressBar'
-import { initialLetter, nextBeltLabel } from '../utils/format'
+import { initialLetter } from '../utils/format'
+import { beltNextDisplayName, beltProgressValue, beltShowsPercent } from '../utils/beltProgress'
 
 export function ChildProfile() {
-  const { selectedChildId } = useParentChild()
+  const { user } = useAuth()
+  const { children, selectedChildId } = useParentChild()
   const [profile, setProfile] = useState<ParentChildProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +33,23 @@ export function ChildProfile() {
 
   const title = profile ? `${profile.firstName} ${profile.lastName}` : 'Профиль'
   const subtitle = profile ? `${profile.age} лет · ${profile.clubName}` : undefined
+  const firstName = user?.name.split(' ')[0] ?? 'Родитель'
+
+  if (children.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-lg bg-white px-5 pt-[max(1.25rem,env(safe-area-inset-top,0px))] pb-6">
+        <h1 className="text-[1.75rem] font-extrabold text-[#101828]">Профиль</h1>
+        <p className="mt-1 text-sm text-[#667085]">{firstName}</p>
+        <ParentEmptyHint
+          title="Ребёнок ещё не привязан"
+          description="После ввода кода от тренера здесь появится карточка ребёнка с поясом и прогрессом."
+        />
+        <div className="mt-8">
+          <LogoutButton />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <ParentPageShell
@@ -96,16 +117,29 @@ export function ChildProfile() {
                     style={{ backgroundColor: profile.beltColor }}
                     aria-hidden="true"
                   />
-                  <span className="text-[10px] text-text-muted">до {nextBeltLabel(profile.beltName)}</span>
+                  <span className="text-[10px] text-text-muted">
+                    {profile.maxRank ? 'высший уровень' : `до ${beltNextDisplayName(profile)}`}
+                  </span>
                 </div>
               </div>
             </div>
             <div className="p-5 lg:p-6">
-              <ProgressBar
-                value={profile.progressPercent}
-                label="Прогресс аттестации"
-                shine
-              />
+              <p className="text-sm text-text-secondary">{profile.progressLabel}</p>
+              {beltShowsPercent(profile) ? (
+                <ProgressBar
+                  value={beltProgressValue(profile)}
+                  label={
+                    profile.beltAssignmentMode === 'ATTENDANCE' && profile.sessionsRequired
+                      ? `${profile.sessionsCompleted ?? 0} / ${profile.sessionsRequired} занятий`
+                      : 'Прогресс аттестации'
+                  }
+                  shine
+                />
+              ) : (
+                <p className="mt-4 rounded-xl bg-surface-muted px-4 py-3 text-sm text-text-secondary">
+                  Следующий пояс присваивает тренер на аттестации.
+                </p>
+              )}
               {profile.coachRecommendation && (
                 <div className="alert-info mt-5 text-sm">
                   <div>

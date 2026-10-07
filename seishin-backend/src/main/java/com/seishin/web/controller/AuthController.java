@@ -3,9 +3,9 @@ package com.seishin.web.controller;
 import com.seishin.security.SecurityUtils;
 import com.seishin.service.AuthService;
 import com.seishin.web.dto.auth.AuthResponseDto;
+import com.seishin.web.dto.auth.CompleteProfileDto;
 import com.seishin.web.dto.auth.InviteLinkDto;
-import com.seishin.web.dto.auth.OtpRequestDto;
-import com.seishin.web.dto.auth.OtpVerifyDto;
+import com.seishin.web.dto.auth.LoginDto;
 import com.seishin.web.dto.auth.RegisterDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +22,25 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterDto dto) {
+    public ResponseEntity<AuthResponseDto> register(@Valid @RequestBody RegisterDto dto) {
         return ResponseEntity.ok(authService.register(dto));
     }
 
-    @PostMapping("/otp/request")
-    public ResponseEntity<Map<String, String>> requestOtp(@Valid @RequestBody OtpRequestDto dto) {
-        return ResponseEntity.ok(authService.requestOtp(dto));
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginDto dto) {
+        return ResponseEntity.ok(authService.login(dto));
     }
 
-    @PostMapping("/otp/verify")
-    public ResponseEntity<AuthResponseDto> verifyOtp(@Valid @RequestBody OtpVerifyDto dto) {
-        return ResponseEntity.ok(authService.verifyOtp(dto));
+    @PostMapping("/profile")
+    public ResponseEntity<Void> completeProfile(@Valid @RequestBody CompleteProfileDto dto) {
+        authService.completeCoachProfile(SecurityUtils.requireCoach(), dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/invite/lookup")
+    public ResponseEntity<Map<String, Object>> lookupInvite(@Valid @RequestBody InviteLinkDto dto) {
+        SecurityUtils.requireParent();
+        return ResponseEntity.ok(authService.lookupInvite(dto));
     }
 
     @PostMapping("/invite/link")

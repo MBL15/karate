@@ -4,6 +4,8 @@ import com.seishin.security.SecurityUtils;
 import com.seishin.service.ChatService;
 import com.seishin.service.DocumentService;
 import com.seishin.service.ParentService;
+import com.seishin.service.TrainingIntentService;
+import com.seishin.web.dto.common.NextTrainingDto;
 import com.seishin.service.PaymentService;
 import com.seishin.web.dto.chat.ChatMessageDto;
 import com.seishin.web.dto.chat.ChatThreadDto;
@@ -29,6 +31,7 @@ public class ParentController {
     private final PaymentService paymentService;
     private final DocumentService documentService;
     private final ChatService chatService;
+    private final TrainingIntentService trainingIntentService;
 
     @GetMapping("/children")
     public ResponseEntity<List<StudentSummaryDto>> children() {
@@ -43,6 +46,13 @@ public class ParentController {
     @GetMapping("/children/{id}/home")
     public ResponseEntity<ParentChildHomeDto> home(@PathVariable Long id) {
         return ResponseEntity.ok(parentService.getChildHome(SecurityUtils.requireParent(), id));
+    }
+
+    @PostMapping("/children/{id}/training-intent")
+    public ResponseEntity<NextTrainingDto> setTrainingIntent(
+            @PathVariable Long id,
+            @Valid @RequestBody SetTrainingIntentDto dto) {
+        return ResponseEntity.ok(trainingIntentService.setIntent(SecurityUtils.requireParent(), id, dto));
     }
 
     @GetMapping("/children/{id}/profile")

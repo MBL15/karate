@@ -1,15 +1,43 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { authApi } from '../api/auth'
 import type { UserRole } from '../api/types'
 import { ApiError } from '../api/client'
-import { BrandMark } from '../components/ui/BrandMark'
-import { IconUser, IconUsers } from '../components/ui/Icons'
+import { AuthBack, AuthButton, AuthField, AuthShell, FieldIcon } from '../components/auth/AuthWidgets'
+import { IconAward, IconCalendar, IconUser, IconUsers } from '../components/ui/Icons'
 import { useAuth } from '../context/AuthContext'
 
 const demoAccounts = {
-  COACH: { phone: '+79001112233', name: 'Алексей Орлов', role: 'COACH' as const },
-  PARENT: { phone: '+79004445566', name: 'Родитель Соколов', role: 'PARENT' as const },
+  COACH: { login: 'coach', password: 'coach123', name: 'Алексей Орлов' },
+  PARENT: { login: 'parent', password: 'parent123', name: 'Родитель Соколов' },
+}
+
+const karateStyles = ['Wado-Ryu', 'Shotokan', 'Goju-Ryu', 'Shito-Ryu', 'Kyokushin']
+
+const loginPattern = /^[a-zA-Z][a-zA-Z0-9._-]{2,31}$/
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+type Step = 'form' | 'profile' | 'done'
+type Tone = 'coach' | 'parent'
+type AccountKey = 'firstName' | 'lastName' | 'login' | 'password' | 'passwordAgain'
+type ProfileKey = 'email' | 'birthDate' | 'experience' | 'accepted'
+
+const accountOrder: AccountKey[] = ['firstName', 'lastName', 'login', 'password', 'passwordAgain']
+const profileOrder: ProfileKey[] = ['email', 'birthDate', 'experience', 'accepted']
+
+const accountIds: Record<AccountKey, string> = {
+  firstName: 'auth-first-name',
+  lastName: 'auth-last-name',
+  login: 'auth-login',
+  password: 'auth-password',
+  passwordAgain: 'auth-password-again',
+}
+
+const profileIds: Record<ProfileKey, string> = {
+  email: 'auth-email',
+  birthDate: 'auth-birth',
+  experience: 'auth-experience',
+  accepted: 'auth-terms',
 }
 
 function parseRole(value: string | null): UserRole | null {
@@ -19,12 +47,11 @@ function parseRole(value: string | null): UserRole | null {
   return null
 }
 
-function normalizePhone(value: string) {
-  const trimmed = value.trim()
-  if (trimmed.startsWith('+')) return trimmed
-  if (trimmed.startsWith('8') && trimmed.length === 11) return `+7${trimmed.slice(1)}`
-  if (trimmed.startsWith('7') && trimmed.length === 11) return `+${trimmed}`
-  return trimmed
+function todayIso() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
 }
 
 export function LoginPage() {
@@ -32,312 +59,650 @@ export function LoginPage() {
   const isRegister = useLocation().pathname.startsWith('/register')
   const role = parseRole(searchParams.get('role'))
 
-  if (!role) {
-    return <AuthRolePicker register={isRegister} />
-  }
-
+  if (!role) return <AuthRolePicker register={isRegister} />
   return <RoleAuthForm role={role} register={isRegister} />
 }
 
 function AuthRolePicker({ register }: { register: boolean }) {
   const base = register ? '/register' : '/login'
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-3xl flex-col justify-center px-5 py-16">
-      <div className="overflow-hidden rounded-[2rem] bg-navy-950 px-8 py-12 text-center text-white">
-        <div className="flex justify-center">
-          <BrandMark variant="site" size="lg" />
-        </div>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.25em] text-white/60">Karate Hub</p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
-          {register ? 'Регистрация' : 'Вход в систему'}
-        </h1>
-        <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-white/70">
-          {register
-            ? 'Выберите роль — анкета одна, кабинеты разные'
-            : 'Выберите, кем вы входите — кабинеты разные'}
-        </p>
-      </div>
-
-      <div className="relative z-10 -mt-5 grid gap-6 sm:grid-cols-2">
-        <Link to={`${base}?role=coach`} className="card-hover p-8">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-blue text-white">
-            <IconUsers size={24} />
-          </span>
-          <p className="mt-6 text-xl font-bold text-text">Тренер</p>
-          <p className="mt-3 text-sm leading-7 text-text-secondary">
-            Посещаемость, ученики, награды и заявки на турниры.
-          </p>
-          <p className="mt-7 text-sm font-semibold text-brand-blue">
-            {register ? 'Зарегистрироваться →' : 'Войти в кабинет →'}
-          </p>
+    <AuthShell
+      heroTitle={register ? 'Создайте кабинет секции' : 'Войдите в Karate Hub'}
+      heroLead={
+        register
+          ? 'Тренер ведёт группы и посещаемость. Родитель смотрит дневник ребёнка. Анкеты разные — выберите свою роль.'
+          : 'Один клуб, два кабинета. Тренер отмечает занятия, родитель следит за поясом, наградами и соревнованиями.'
+      }
+      points={['Группы, журнал и награды для тренера', 'Дневник, пояс и чат для родителя', 'Демо-вход без своей почты']}
+    >
+      <p className="text-xs font-semibold tracking-[0.16em] text-text-muted uppercase">Karate Hub</p>
+      <h1 className="mt-2 text-3xl font-bold tracking-tight text-text">{register ? 'Регистрация' : 'Вход'}</h1>
+      <p className="mt-2 text-sm leading-6 text-text-secondary">
+        {register ? 'Выберите роль — дальше откроется своя анкета.' : 'Выберите, в какой кабинет входите.'}
+      </p>
+      <nav aria-label="Выбор роли" className="mt-8 grid gap-3">
+        <RoleCard
+          to={`${base}?role=coach`}
+          tone="coach"
+          title="Тренер"
+          text="Группы, посещаемость и ученики"
+          icon={<IconUsers size={22} />}
+        />
+        <RoleCard
+          to={`${base}?role=parent`}
+          tone="parent"
+          title="Родитель"
+          text="Дневник ребёнка и привязка по коду"
+          icon={<IconUser size={22} />}
+        />
+      </nav>
+      <p className="mt-8 text-center text-sm text-text-secondary">
+        {register ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}
+        <Link to={register ? '/login' : '/register'} className="font-semibold text-navy-900 underline-offset-2 hover:underline">
+          {register ? 'Войти' : 'Зарегистрироваться'}
         </Link>
-        <Link to={`${base}?role=parent`} className="card-hover p-8">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-green text-white">
-            <IconUser size={24} />
-          </span>
-          <p className="mt-6 text-xl font-bold text-text">Родитель</p>
-          <p className="mt-3 text-sm leading-7 text-text-secondary">
-            Дневник ребёнка, прогресс пояса, оплаты и соревнования.
-          </p>
-          <p className="mt-7 text-sm font-semibold text-brand-green">
-            {register ? 'Зарегистрироваться →' : 'Войти в дневник →'}
-          </p>
-        </Link>
-      </div>
+      </p>
+    </AuthShell>
+  )
+}
 
-      <Link
-        to={register ? '/login' : '/register'}
-        className="mt-10 text-center text-sm text-text-secondary hover:text-text"
+function RoleCard({
+  to,
+  tone,
+  title,
+  text,
+  icon,
+}: {
+  to: string
+  tone: Tone
+  title: string
+  text: string
+  icon: ReactNode
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex min-h-20 items-center gap-4 rounded-2xl border border-border bg-surface p-4 transition hover:border-navy-800/25 hover:bg-surface-muted active:bg-surface-subtle"
+    >
+      <span
+        className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${
+          tone === 'coach' ? 'bg-navy-900 text-white' : 'bg-brand-green text-navy-950'
+        }`}
       >
-        {register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
-      </Link>
-      <Link to="/" className="mt-3 text-center text-sm text-text-secondary hover:text-text">
-        ← На главную
-      </Link>
-    </div>
+        {icon}
+      </span>
+      <span>
+        <span className="block font-semibold text-text">{title}</span>
+        <span className="mt-0.5 block text-sm text-text-secondary">{text}</span>
+      </span>
+    </Link>
   )
 }
 
 function RoleAuthForm({ role, register }: { role: UserRole; register: boolean }) {
-  const demo = demoAccounts[role]
   const isCoach = role === 'COACH'
+  const tone: Tone = isCoach ? 'coach' : 'parent'
+  const demo = demoAccounts[role]
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
-  const [step, setStep] = useState<'form' | 'otp'>('form')
-  const [error, setError] = useState('')
-  const [info, setInfo] = useState('')
-  const errorRef = useRef<HTMLParagraphElement>(null)
+  const [clubName, setClubName] = useState('')
+  const [loginName, setLoginName] = useState('')
+  const [password, setPassword] = useState('')
+  const [passwordAgain, setPasswordAgain] = useState('')
+  const [email, setEmail] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [experience, setExperience] = useState('')
+  const [style, setStyle] = useState('Wado-Ryu')
+  const [accepted, setAccepted] = useState(false)
+  const [step, setStep] = useState<Step>('form')
+  const [touched, setTouched] = useState<Partial<Record<AccountKey | ProfileKey, boolean>>>({})
+  const [attempted, setAttempted] = useState(false)
+  const [serverError, setServerError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [focusTick, setFocusTick] = useState(0)
+  const summaryRef = useRef<HTMLDivElement>(null)
   const { login } = useAuth()
   const navigate = useNavigate()
+  const maxBirth = todayIso()
 
   useEffect(() => {
-    if (error) errorRef.current?.focus()
-  }, [error])
+    if (focusTick) summaryRef.current?.focus()
+  }, [focusTick])
 
   useEffect(() => {
+    setStep('form')
+    setServerError('')
+    setAttempted(false)
+    setTouched({})
+    setLoginName('')
+    setPassword('')
+    setPasswordAgain('')
     setFirstName('')
     setLastName('')
-    setPhone('')
-    setCode('')
-    setStep('form')
-    setError('')
-    setInfo('')
+    setClubName('')
   }, [role, register])
 
-  const completeLogin = (data: Awaited<ReturnType<typeof authApi.verifyOtp>>) => {
+  useEffect(() => {
+    setAttempted(false)
+    setTouched({})
+    setServerError('')
+  }, [step])
+
+  const home = isCoach ? '/coach' : '/app'
+
+  const accountProblems = useMemo(() => {
+    const errors: Partial<Record<AccountKey, string>> = {}
+    if (register && !firstName.trim()) errors.firstName = 'Укажите имя'
+    if (register && isCoach && !lastName.trim()) errors.lastName = 'Укажите фамилию'
+    const normalizedLogin = loginName.trim()
+    if (!normalizedLogin) errors.login = 'Укажите логин'
+    else if (!loginPattern.test(normalizedLogin)) errors.login = 'Латиница, от 3 символов: можно цифры, точку, дефис и _'
+    if (!password) errors.password = 'Укажите пароль'
+    else if (password.length < 6) errors.password = 'Пароль должен быть не короче 6 символов'
+    else if (password.length > 72) errors.password = 'Пароль не длиннее 72 символов'
+    if (register && !passwordAgain) errors.passwordAgain = 'Повторите пароль'
+    else if (register && passwordAgain !== password) errors.passwordAgain = 'Пароли не совпадают'
+    return errors
+  }, [firstName, isCoach, lastName, loginName, password, passwordAgain, register])
+
+  const profileProblems = useMemo(() => {
+    const errors: Partial<Record<ProfileKey, string>> = {}
+    if (email.trim() && !emailPattern.test(email.trim())) errors.email = 'Укажите корректный email'
+    if (!birthDate) errors.birthDate = 'Укажите дату рождения'
+    else if (birthDate > maxBirth) errors.birthDate = 'Дата не может быть в будущем'
+    if (experience === '') errors.experience = 'Укажите стаж в годах'
+    else if (Number(experience) > 80) errors.experience = 'Стаж не больше 80 лет'
+    if (!accepted) errors.accepted = 'Подтвердите согласие с условиями'
+    return errors
+  }, [accepted, birthDate, email, experience, maxBirth])
+
+  const visibleAccount = (key: AccountKey) => ((attempted || touched[key]) ? accountProblems[key] : undefined)
+  const visibleProfile = (key: ProfileKey) => ((attempted || touched[key]) ? profileProblems[key] : undefined)
+
+  const accountSummary = attempted
+    ? accountOrder.flatMap((key) => (accountProblems[key] ? [{ id: accountIds[key], message: accountProblems[key] }] : []))
+    : []
+  const profileSummary = attempted
+    ? profileOrder.flatMap((key) => (profileProblems[key] ? [{ id: profileIds[key], message: profileProblems[key] }] : []))
+    : []
+
+  const mark = (key: AccountKey | ProfileKey) => setTouched((current) => ({ ...current, [key]: true }))
+
+  const enterApp = (data: Awaited<ReturnType<typeof authApi.login>>) => {
     login({
       userId: data.userId,
       name: data.name,
+      login: data.login,
       phone: data.phone,
       role: data.role,
       clubId: data.clubId,
       token: data.token,
     })
-    navigate(data.role === 'COACH' ? '/coach' : '/app')
+    if (!register) {
+      navigate(data.role === 'COACH' ? '/coach' : '/app')
+      return
+    }
+    if (data.role === 'COACH') setStep('profile')
+    else navigate('/app')
   }
 
   const submitForm = async (e: FormEvent) => {
     e.preventDefault()
-    setError('')
-    setInfo('')
-    const normalized = normalizePhone(phone)
+    setServerError('')
+    setAttempted(true)
+    if (Object.keys(accountProblems).length > 0) {
+      setFocusTick((value) => value + 1)
+      return
+    }
+    setSubmitting(true)
     try {
-      if (register) {
-        await authApi.register({ firstName, lastName, phone: normalized, role })
-      } else {
-        await authApi.requestOtp(normalized, role)
-      }
-      setPhone(normalized)
-      setStep('otp')
-      setInfo(register ? 'Аккаунт создан. Тестовый код: 123456' : 'Код отправлен. Тестовый код: 123456')
+      const data = register
+        ? await authApi.register({
+            firstName: firstName.trim(),
+            lastName: isCoach ? lastName.trim() : undefined,
+            login: loginName.trim(),
+            password,
+            role,
+            clubName: isCoach && clubName.trim() ? clubName.trim() : undefined,
+          })
+        : await authApi.login(loginName.trim(), password, role)
+      enterApp(data)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Сервер недоступен')
+      setServerError(err instanceof ApiError ? err.message : 'Сервер недоступен')
+      setFocusTick((value) => value + 1)
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const verifyOtp = async (e: FormEvent) => {
+  const finishProfile = async (e: FormEvent) => {
     e.preventDefault()
-    setError('')
+    setServerError('')
+    setAttempted(true)
+    if (Object.keys(profileProblems).length > 0) {
+      setFocusTick((value) => value + 1)
+      return
+    }
+    setSubmitting(true)
     try {
-      const data = await authApi.verifyOtp(phone, code, role)
-      completeLogin(data)
+      await authApi.completeProfile({
+        email: email.trim() || undefined,
+        birthDate: birthDate || undefined,
+        experienceYears: experience === '' ? undefined : Number(experience),
+        karateStyle: style,
+      })
+      setStep('done')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Неверный код')
+      setServerError(err instanceof ApiError ? err.message : 'Не удалось сохранить профиль')
+      setFocusTick((value) => value + 1)
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const demoLogin = async () => {
-    setPhone(demo.phone)
-    setError('')
-    setInfo('')
-    try {
-      await authApi.requestOtp(demo.phone, role)
-      setStep('otp')
-      setCode('123456')
-      setInfo(`Демо (${demo.name}): код 123456 уже подставлен — нажмите «Войти»`)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Запустите бэкенд: gradlew.bat bootRun')
-    }
+  const fillDemo = () => {
+    setLoginName(demo.login)
+    setPassword(demo.password)
+    setServerError('')
+    setAttempted(false)
+    setTouched((current) => ({ ...current, login: true, password: true }))
   }
 
-  const action = isCoach ? 'btn-coach w-full py-3.5' : 'btn-primary w-full py-3.5'
-  const field = isCoach ? 'input-coach py-3.5' : 'input py-3.5'
-  const switchTo = register ? `/login?role=${role.toLowerCase()}` : `/register?role=${role.toLowerCase()}`
+  const clubLabel = clubName.trim() || 'Karate Hub'
+  const hero = register
+    ? isCoach
+      ? {
+          title: 'Кабинет тренера',
+          lead: 'После регистрации можно завести группы, отметить занятие и выдать награду.',
+          points: ['Своё название клуба', 'Журнал посещаемости', 'Пояса, бейджи и соревнования'],
+        }
+      : {
+          title: 'Дневник родителя',
+          lead: 'Аккаунт нужен, чтобы привязать ребёнка по коду тренера и видеть его прогресс.',
+          points: ['Привязка по коду из клуба', 'Пояс, награды и история', 'Чат с тренером'],
+        }
+    : isCoach
+      ? {
+          title: 'С возвращением, тренер',
+          lead: 'Журнал, расписание и ученики открываются сразу после входа.',
+          points: ['Отметить занятие за минуту', 'Список групп и родителей', 'Демо-аккаунт Алексея Орлова'],
+        }
+      : {
+          title: 'Дневник уже ждёт',
+          lead: 'Войдите, чтобы открыть пояс, ближайшее занятие и сообщения тренера.',
+          points: ['Прогресс ребёнка', 'Соревнования и документы', 'Демо-аккаунт семьи Соколовых'],
+        }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-lg flex-col justify-center px-5 py-16">
-      <div className="overflow-hidden rounded-[2rem] bg-navy-950 px-8 py-12 text-center text-white">
-        <div className="flex justify-center">
-          <BrandMark variant={isCoach ? 'coach' : 'parent'} size="lg" />
-        </div>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.25em] text-white/60">
-          {isCoach ? 'Кабинет тренера' : 'Дневник родителя'}
-        </p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
-          {register
-            ? isCoach
-              ? 'Регистрация тренера'
-              : 'Регистрация родителя'
-            : isCoach
-              ? 'Вход для тренера'
-              : 'Вход для родителя'}
-        </h1>
-        <p className="mx-auto mt-3 max-w-sm text-base leading-relaxed text-white/70">
-          {register ? 'Имя, фамилия и телефон — затем код из SMS' : 'Подтверждение номера по SMS-коду'}
-        </p>
-      </div>
+    <AuthShell heroTitle={hero.title} heroLead={hero.lead} points={hero.points} showHome={step === 'form'}>
+      {step === 'form' && (
+        <AuthBack
+          onClick={() => {
+            setServerError('')
+            navigate(register ? '/register' : '/login')
+          }}
+        />
+      )}
 
-      <div className="card relative z-10 -mt-5 p-8 sm:p-10">
-        <ol className="mb-8 flex items-center gap-2" aria-label="Шаги входа">
-          {(['form', 'otp'] as const).map((s, i) => (
-            <li key={s} className="flex flex-1 items-center gap-2" aria-current={step === s ? 'step' : undefined}>
-              <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  step === s || (step === 'otp' && s === 'form')
-                    ? isCoach
-                      ? 'bg-brand-blue text-white'
-                      : 'bg-brand-green text-white'
-                    : 'bg-surface-muted text-text-secondary'
-                }`}
-              >
-                {i + 1}
-              </span>
-              <span className={`text-xs font-medium ${step === s ? 'text-text' : 'text-text-secondary'}`}>
-                {s === 'form' ? (register ? 'Данные' : 'Телефон') : 'Код'}
-              </span>
-              {i === 0 && <div className="mx-1 h-px flex-1 bg-border" />}
-            </li>
-          ))}
-        </ol>
+      {register && isCoach && <CoachSteps step={step} />}
 
-        {error && (
-          <p ref={errorRef} tabIndex={-1} role="alert" className="alert-error mb-6 outline-none">
-            {error}
+      {step === 'form' && (
+        <form onSubmit={submitForm} aria-busy={submitting} noValidate className="flex flex-1 flex-col">
+          <RoleBadge tone={tone} label={isCoach ? 'Тренер' : 'Родитель'} />
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-text">
+            {register ? (isCoach ? 'Регистрация тренера' : 'Регистрация родителя') : isCoach ? 'Вход тренера' : 'Вход родителя'}
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-text-secondary">
+            {register
+              ? isCoach
+                ? 'Имя, логин и пароль. Клуб можно назвать сразу или оставить Karate Hub.'
+                : 'Имя, логин и пароль. Ребёнка привяжете кодом уже в дневнике.'
+              : 'Логин и пароль кабинета. Пароль можно вставить из менеджера.'}
           </p>
-        )}
-        {info && (
-          <p role="status" className="alert-info mb-6">
-            {info}
-          </p>
-        )}
-
-        {step === 'form' ? (
-          <form onSubmit={submitForm} className="space-y-6">
+          <FormSummary
+            summaryRef={summaryRef}
+            title={serverError ? 'Не получилось продолжить' : 'Исправьте ошибки в форме'}
+            items={serverError ? [{ message: serverError }] : accountSummary}
+          />
+          <div className="mt-6 space-y-4">
             {register && (
-              <>
-                <div>
-                  <label className="label" htmlFor="auth-first-name">Имя</label>
-                  <input
-                    id="auth-first-name"
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Иван"
-                    className={field}
-                    required
-                    autoComplete="given-name"
-                  />
-                </div>
-                <div>
-                  <label className="label" htmlFor="auth-last-name">Фамилия</label>
-                  <input
-                    id="auth-last-name"
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Иванов"
-                    className={field}
-                    required
-                    autoComplete="family-name"
-                  />
-                </div>
-              </>
+              <AuthField
+                id={accountIds.firstName}
+                label="Имя"
+                tone={tone}
+                icon={<IconUser size={18} />}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                onBlur={() => mark('firstName')}
+                error={visibleAccount('firstName')}
+                placeholder={isCoach ? 'Иван' : 'Мария'}
+                autoComplete="given-name"
+                name="given-name"
+                maxLength={80}
+                required
+              />
             )}
-            <div>
-              <label className="label" htmlFor="auth-phone">Телефон</label>
-              <input
-                id="auth-phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder={register ? '+79001234567' : demo.phone}
-                className={field}
+            {register && isCoach && (
+              <AuthField
+                id={accountIds.lastName}
+                label="Фамилия"
+                tone={tone}
+                icon={<IconUser size={18} />}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                onBlur={() => mark('lastName')}
+                error={visibleAccount('lastName')}
+                placeholder="Петров"
+                autoComplete="family-name"
+                name="family-name"
+                maxLength={80}
                 required
-                autoComplete="tel"
-                aria-invalid={Boolean(error)}
               />
-            </div>
-            <button type="submit" className={action}>
-              {register ? 'Зарегистрироваться' : 'Получить код'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={verifyOtp} className="space-y-6">
-            <div>
-              <label className="label" htmlFor="auth-code">Код из SMS</label>
-              <input
-                id="auth-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="123456"
-                maxLength={6}
-                className={`${field} text-center text-xl tracking-[0.3em]`}
+            )}
+            <AuthField
+              id={accountIds.login}
+              label="Логин"
+              tone={tone}
+              icon={<IconUser size={18} />}
+              value={loginName}
+              onChange={(e) => setLoginName(e.target.value)}
+              onBlur={() => mark('login')}
+              error={visibleAccount('login')}
+              hint="Латиница, от 3 символов. Можно цифры, точку, дефис и _."
+              placeholder={demo.login}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              name="username"
+              maxLength={32}
+              required
+            />
+            <AuthField
+              id={accountIds.password}
+              label="Пароль"
+              tone={tone}
+              revealable
+              icon={<FieldIcon><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></FieldIcon>}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => mark('password')}
+              error={visibleAccount('password')}
+              hint="Не короче 6 символов. Можно вставить из менеджера паролей."
+              placeholder="Не короче 6 символов"
+              autoComplete={register ? 'new-password' : 'current-password'}
+              name="password"
+              maxLength={72}
+              required
+            />
+            {register && (
+              <AuthField
+                id={accountIds.passwordAgain}
+                label="Повторите пароль"
+                tone={tone}
+                revealable
+                revealLabel="повтор пароля"
+                icon={<FieldIcon><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></FieldIcon>}
+                value={passwordAgain}
+                onChange={(e) => setPasswordAgain(e.target.value)}
+                onBlur={() => mark('passwordAgain')}
+                error={visibleAccount('passwordAgain')}
+                placeholder="Ещё раз"
+                autoComplete="new-password"
+                name="password-confirm"
+                maxLength={72}
                 required
-                aria-invalid={Boolean(error)}
-                aria-describedby="auth-code-hint"
               />
-              <p id="auth-code-hint" className="mt-3 text-sm text-text-secondary">Тестовый код: 123456</p>
+            )}
+            {register && isCoach && (
+              <AuthField
+                id="auth-club"
+                label="Название клуба"
+                tone={tone}
+                icon={<FieldIcon><path d="M4 20V9l8-5 8 5v11" /><path d="M9 20v-6h6v6" /></FieldIcon>}
+                value={clubName}
+                onChange={(e) => setClubName(e.target.value)}
+                hint="Необязательно. Если пусто, клуб будет называться Karate Hub."
+                placeholder="Wakayama Dojo"
+                autoComplete="organization"
+                name="organization"
+                maxLength={120}
+              />
+            )}
+          </div>
+          <div className="mt-8">
+            <AuthButton tone={tone} type="submit" disabled={submitting}>
+              {submitting ? (register ? 'Создаём аккаунт…' : 'Входим…') : register ? 'Продолжить' : 'Войти'}
+            </AuthButton>
+            {!register && (
+              <button type="button" onClick={fillDemo} className="btn-secondary mt-3 w-full">
+                Заполнить демо: {demo.login}
+              </button>
+            )}
+            <p className="mt-4 text-center text-sm leading-6 text-text-secondary">
+              {register ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}
+              <Link
+                to={register ? `/login?role=${role.toLowerCase()}` : `/register?role=${role.toLowerCase()}`}
+                className="font-semibold text-navy-900 underline-offset-2 hover:underline"
+              >
+                {register ? 'Войти' : 'Зарегистрироваться'}
+              </Link>
+            </p>
+          </div>
+        </form>
+      )}
+
+      {step === 'profile' && (
+        <form onSubmit={finishProfile} aria-busy={submitting} noValidate className="flex flex-1 flex-col">
+          <h1 className="text-2xl font-bold tracking-tight text-text">Дополните профиль</h1>
+          <p className="mt-2 text-sm leading-6 text-text-secondary">
+            Эти данные видите только вы. Email можно пропустить.
+          </p>
+          <FormSummary
+            summaryRef={summaryRef}
+            title={serverError ? 'Не получилось продолжить' : 'Исправьте ошибки в форме'}
+            items={serverError ? [{ message: serverError }] : profileSummary}
+          />
+          <div className="mt-6 space-y-4">
+            <AuthField
+              id={profileIds.email}
+              label="Email"
+              tone={tone}
+              icon={<FieldIcon><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></FieldIcon>}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => mark('email')}
+              error={visibleProfile('email')}
+              hint="Необязательно."
+              placeholder="ivan.petrov@email.ru"
+              autoComplete="email"
+              name="email"
+              maxLength={120}
+            />
+            <AuthField
+              id={profileIds.birthDate}
+              label="Дата рождения"
+              tone={tone}
+              type="date"
+              value={birthDate}
+              max={maxBirth}
+              onChange={(e) => setBirthDate(e.target.value)}
+              onBlur={() => mark('birthDate')}
+              error={visibleProfile('birthDate')}
+              required
+            />
+            <AuthField
+              id={profileIds.experience}
+              label="Стаж тренерской работы, лет"
+              tone={tone}
+              icon={<FieldIcon><path d="M12 6v6l4 2" /><circle cx="12" cy="12" r="9" /></FieldIcon>}
+              inputMode="numeric"
+              value={experience}
+              onChange={(e) => setExperience(e.target.value.replace(/\D/g, '').slice(0, 2))}
+              onBlur={() => mark('experience')}
+              error={visibleProfile('experience')}
+              placeholder="5"
+              required
+            />
+            <div>
+              <label htmlFor="auth-style" className="label">
+                Стиль каратэ
+              </label>
+              <div className="relative">
+                <select id="auth-style" value={style} onChange={(e) => setStyle(e.target.value)} className="input-coach min-h-12 appearance-none pr-10">
+                  {karateStyles.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted" aria-hidden>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </div>
             </div>
-            <button type="submit" className={action}>
-              {register ? 'Подтвердить и войти' : 'Войти'}
-            </button>
-            <button type="button" onClick={() => setStep('form')} className="min-h-11 w-full text-sm font-medium text-text-secondary hover:text-text">
-              Изменить данные
-            </button>
-          </form>
-        )}
+            <div>
+              <label htmlFor={profileIds.accepted} className="flex min-h-12 items-start gap-3 rounded-xl border border-border px-3 py-3 text-sm leading-5 text-text">
+                <input
+                  id={profileIds.accepted}
+                  type="checkbox"
+                  checked={accepted}
+                  onChange={(e) => {
+                    setAccepted(e.target.checked)
+                    mark('accepted')
+                  }}
+                  aria-invalid={visibleProfile('accepted') ? true : undefined}
+                  aria-describedby={visibleProfile('accepted') ? `${profileIds.accepted}-error` : undefined}
+                  className="mt-0.5 size-5 shrink-0 accent-navy-900"
+                />
+                <span>Я согласен с условиями использования и политикой конфиденциальности</span>
+              </label>
+              {visibleProfile('accepted') && (
+                <p id={`${profileIds.accepted}-error`} className="mt-1.5 text-sm text-error">
+                  {visibleProfile('accepted')}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="mt-8">
+            <AuthButton tone={tone} type="submit" disabled={submitting}>
+              {submitting ? 'Сохраняем…' : 'Завершить регистрацию'}
+            </AuthButton>
+          </div>
+        </form>
+      )}
 
-        {!register && (
-          <>
-            <button type="button" onClick={() => void demoLogin()} className={`mt-8 ${action}`}>
-              Демо: {demo.phone}
-            </button>
-            <p className="mt-3 text-center text-sm text-text-muted">Код всегда 123456</p>
-          </>
-        )}
-      </div>
+      {step === 'done' && (
+        <div className="flex flex-1 flex-col">
+          <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-green text-navy-950">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="m5 12 5 5L20 7" />
+            </svg>
+          </span>
+          <h1 className="mt-5 text-2xl font-bold tracking-tight text-text">Профиль создан</h1>
+          <p className="mt-2 text-sm leading-6 text-text-secondary">
+            Добро пожаловать в {clubLabel}. Кабинет тренера уже открыт.
+          </p>
+          <div className="mt-8">
+            <p className="text-sm font-semibold text-text">Что дальше</p>
+            <ul className="mt-4 space-y-3">
+              {[
+                { icon: <IconUsers size={18} />, text: 'Создайте группы и добавьте учеников' },
+                { icon: <IconCalendar size={18} />, text: 'Отмечайте посещаемость на тренировках' },
+                { icon: <IconAward size={18} />, text: 'Выдавайте награды и следите за прогрессом' },
+              ].map((item) => (
+                <li key={item.text} className="flex items-center gap-3 text-sm text-text">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-navy-900 text-white">
+                    {item.icon}
+                  </span>
+                  {item.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="mt-8">
+            <AuthButton tone={tone} type="button" onClick={() => navigate(home)}>
+              Перейти в приложение
+            </AuthButton>
+          </div>
+        </div>
+      )}
+    </AuthShell>
+  )
+}
 
-      <Link to={switchTo} className="mt-10 text-center text-sm text-text-secondary hover:text-text">
-        {register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
-      </Link>
-      <Link to={register ? '/register' : '/login'} className="mt-3 text-center text-sm text-text-secondary hover:text-text">
-        ← Выбрать другую роль
-      </Link>
+function RoleBadge({ tone, label }: { tone: Tone; label: string }) {
+  return (
+    <p
+      className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
+        tone === 'coach' ? 'bg-navy-900 text-white' : 'bg-brand-green-light text-navy-950'
+      }`}
+    >
+      {label}
+    </p>
+  )
+}
+
+function CoachSteps({ step }: { step: Step }) {
+  const items: { key: Step; label: string }[] = [
+    { key: 'form', label: 'Аккаунт' },
+    { key: 'profile', label: 'Профиль' },
+    { key: 'done', label: 'Готово' },
+  ]
+  const index = items.findIndex((item) => item.key === step)
+  return (
+    <ol aria-label="Шаги регистрации" className="mb-6 grid grid-cols-3 gap-2">
+      {items.map((item, itemIndex) => {
+        const state = itemIndex < index ? 'done' : itemIndex === index ? 'current' : 'upcoming'
+        return (
+          <li key={item.key} aria-current={state === 'current' ? 'step' : undefined}>
+            <span
+              className={`block h-1 rounded-full ${
+                state === 'done' ? 'bg-brand-green' : state === 'current' ? 'bg-navy-900' : 'bg-surface-subtle'
+              }`}
+            />
+            <span
+              className={`mt-2 block text-xs ${
+                state === 'current' ? 'font-semibold text-text' : state === 'done' ? 'font-medium text-text-secondary' : 'text-text-muted'
+              }`}
+            >
+              {itemIndex + 1}. {item.label}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function FormSummary({
+  summaryRef,
+  title,
+  items,
+}: {
+  summaryRef: React.RefObject<HTMLDivElement | null>
+  title: string
+  items: { id?: string; message: string }[]
+}) {
+  if (items.length === 0) return null
+  return (
+    <div ref={summaryRef} tabIndex={-1} role="alert" aria-labelledby="auth-error-title" className="mt-4 rounded-xl bg-error-bg px-4 py-3 text-sm text-error outline-none">
+      <h2 id="auth-error-title" className="font-semibold">
+        {title}
+      </h2>
+      <ul className="mt-2 space-y-1">
+        {items.map((item) => (
+          <li key={`${item.id ?? 'server'}-${item.message}`}>
+            {item.id ? (
+              <a href={`#${item.id}`} className="underline underline-offset-2">
+                {item.message}
+              </a>
+            ) : (
+              item.message
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

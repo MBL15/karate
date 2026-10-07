@@ -9,8 +9,16 @@ export function useNativeShell() {
 
     document.documentElement.classList.add('native-app')
 
-    void StatusBar.setStyle({ style: Style.Dark })
-    void StatusBar.setBackgroundColor({ color: '#121820' })
+    void (async () => {
+      try {
+        // Контент не рисуется под системной строкой — и на эмуляторе, и на телефоне.
+        await StatusBar.setOverlaysWebView({ overlay: false })
+      } catch {
+        /* plugin unavailable */
+      }
+      await StatusBar.setStyle({ style: Style.Dark })
+      await StatusBar.setBackgroundColor({ color: '#121820' })
+    })()
 
     const backListener = App.addListener('backButton', ({ canGoBack }) => {
       if (canGoBack) {
