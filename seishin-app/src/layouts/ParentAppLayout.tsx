@@ -25,7 +25,7 @@ function ParentAppLayoutInner() {
   const { pathname } = useLocation()
   const isSecretPage = pathname.endsWith('/secret')
   const emptyParent = !childrenLoading && children.length === 0
-  const firstName = user?.name.split(' ')[0] ?? 'Родитель'
+  const firstName = user?.name?.split(' ')[0] || 'Родитель'
 
 
 

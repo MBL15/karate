@@ -33,7 +33,7 @@ export function ChildProfile() {
 
   const title = profile ? `${profile.firstName} ${profile.lastName}` : 'Профиль'
   const subtitle = profile ? `${profile.age} лет · ${profile.clubName}` : undefined
-  const firstName = user?.name.split(' ')[0] ?? 'Родитель'
+  const firstName = user?.name?.split(' ')[0] || 'Родитель'
 
   if (children.length === 0) {
     return (

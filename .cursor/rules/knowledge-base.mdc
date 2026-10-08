@@ -7,4 +7,4 @@ alwaysApply: false
 
 Перед крупными задачами читай **`docs/PROJECT_KNOWLEDGE.md`**: продукт, безопасность, сущности, маршруты фронта, API, чеклисты.
 
-Детали API — `seishin-backend/README.md`. Бэкенд/фронт в коде — правила `backend.mdc` и `frontend.mdc`.
+Детали API — `seishin-backend/README.md`. VPS и деплой — `deploy/README.md`. Бэкенд/фронт в коде — правила `backend.mdc` и `frontend.mdc`.

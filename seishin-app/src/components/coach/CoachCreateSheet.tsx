@@ -1,29 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { Dialog } from '../a11y/Dialog'
-import {
-  IconArrowRight,
-  IconAward,
-  IconHeadset,
-  IconMegaphone,
-  IconTrophy,
-  IconUsers,
-  IconX,
-} from '../ui/Icons'
+import { IconArrowRight, IconCalendar, IconHeadset, IconMegaphone, IconTrophy, IconX } from '../ui/Icons'
 
 const actions = [
-  {
-    id: 'belts',
-    title: 'Правила поясов',
-    description: 'Режим прогресса и нормы занятий',
-    kind: 'belts' as const,
-    icon: IconAward,
-    iconClass: 'bg-[#fff4d6] text-[#a16207]',
-  },
   {
     id: 'competition',
     title: 'Заявка на соревнование',
     description: 'Создать турнир / заявку',
-    kind: 'nav' as const,
     to: '/coach/competitions?add=competition',
     icon: IconTrophy,
     iconClass: 'bg-[#f8e7b0] text-[#a16207]',
@@ -32,7 +15,6 @@ const actions = [
     id: 'notice',
     title: 'Уведомление родителям',
     description: 'Отправить сообщение',
-    kind: 'nav' as const,
     to: '/coach/chat',
     icon: IconMegaphone,
     iconClass: 'bg-[#dbe7fb] text-[#1d4e89]',
@@ -41,37 +23,26 @@ const actions = [
     id: 'training',
     title: 'Тренировка в группе',
     description: 'Создать тренировку',
-    kind: 'nav' as const,
     to: '/coach/schedule?add=slot',
-    icon: IconUsers,
+    icon: IconCalendar,
     iconClass: 'bg-[#d9f3e4] text-[#1f7a4d]',
   },
   {
     id: 'katavr',
     title: 'Тренировка в KataVR',
     description: 'Создать тренировку',
-    kind: 'nav' as const,
     to: '/coach/secret',
     icon: IconHeadset,
     iconClass: 'bg-[#eadcfd] text-[#6d28d9]',
   },
 ] as const
 
-export function CoachCreateSheet({
-  open,
-  onClose,
-  onOpenBeltSettings,
-}: {
-  open: boolean
-  onClose: () => void
-  onOpenBeltSettings: () => void
-}) {
+export function CoachCreateSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
 
   return (
     <Dialog open={open} titleId="coach-create-title" onClose={onClose}>
       <div className="relative overflow-hidden rounded-[1.75rem] bg-white p-5 shadow-[var(--shadow-elevated)]">
-        <div aria-hidden className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[#f0d078] to-transparent" />
         <div className="flex items-center justify-between gap-3">
           <h2 id="coach-create-title" className="font-display text-xl font-semibold tracking-tight text-text">
             Создать
@@ -86,7 +57,7 @@ export function CoachCreateSheet({
           </button>
         </div>
 
-        <ul className="mt-4 space-y-1">
+        <ul className="mt-3">
           {actions.map((action) => {
             const Icon = action.icon
             return (
@@ -95,13 +66,9 @@ export function CoachCreateSheet({
                   type="button"
                   onClick={() => {
                     onClose()
-                    if (action.kind === 'belts') {
-                      onOpenBeltSettings()
-                      return
-                    }
                     navigate(action.to)
                   }}
-                  className="flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left transition hover:bg-surface-muted active:scale-[0.99]"
+                  className="flex w-full items-center gap-3 rounded-2xl px-1 py-3 text-left transition hover:bg-surface-muted active:scale-[0.99]"
                 >
                   <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${action.iconClass}`}>
                     <Icon size={20} />

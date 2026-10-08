@@ -80,11 +80,16 @@ const NEXT_BELT: Record<string, string> = {
   чёрный: 'мастера',
 }
 
-export function nextBeltLabel(beltName: string): string {
-  const key = beltName.trim().toLowerCase()
+export function nextBeltLabel(beltName?: string | null): string {
+  const key = beltName?.trim().toLowerCase() ?? ''
   return NEXT_BELT[key] ?? 'следующего пояса'
 }
 
-export function initialLetter(name: string): string {
-  return (name.trim().charAt(0) || '?').toUpperCase()
+export function initialLetter(name?: string | null): string {
+  return (name?.trim().charAt(0) || '?').toUpperCase()
+}
+
+export function beltPhrase(beltName?: string | null): string {
+  const name = beltName?.trim()
+  return name ? `${name} пояс` : 'пояс не назначен'
 }

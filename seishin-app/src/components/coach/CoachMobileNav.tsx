@@ -152,21 +152,11 @@ export function CoachMobileNav({
                 aria-expanded={createOpen}
                 aria-haspopup="dialog"
                 aria-label={createOpen ? 'Закрыть меню создания' : 'Создать'}
-                className={`${navItemClass} active:scale-95`}
+                className="relative z-10 flex h-full w-full items-center justify-center active:scale-95"
               >
-                <NavItemBody
-                  active={createOpen || activeIndex === 2}
-                  icon={
-                    <span
-                      className={`flex size-8 items-center justify-center rounded-full bg-[#f5c518] text-navy-950 shadow-[0_2px_8px_rgb(245_197_24_/_0.45)] transition-transform ${
-                        createOpen ? 'rotate-45' : ''
-                      }`}
-                    >
-                      <IconPlus size={18} />
-                    </span>
-                  }
-                  label="Создать"
-                />
+                <span className="flex size-11 items-center justify-center rounded-full bg-[#f5c518] text-navy-950 shadow-[0_4px_12px_rgb(245_197_24_/_0.4)]">
+                  <IconPlus size={20} />
+                </span>
               </button>
               <CoachTab tab={tabs[2]} slotActive={activeIndex === 3} />
               <NavLink

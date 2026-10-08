@@ -85,7 +85,7 @@ const tools: {
   {
     id: 'club',
     title: 'Настройки клуба',
-    subtitle: 'Код клуба для учеников',
+    subtitle: 'Группы, пояса, расписание',
     icon: IconSettings,
     iconClass: 'bg-[#eceae4] text-text-secondary',
   },
@@ -348,23 +348,25 @@ export function CoachToolsPage() {
 
   return (
     <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-[max(1.25rem,var(--safe-top-effective))] lg:max-w-3xl lg:px-8 lg:pt-8">
-      <header className="coach-mobile-section">
+      <header>
         <h1 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-text">Инструменты</h1>
         <p className="mt-1 text-sm text-text-secondary">Помощник тренера в повседневной работе</p>
       </header>
       <div className="mt-5 grid grid-cols-2 gap-3">
         {tools.map((tool) => {
           const Icon = tool.icon
-          const className = `flex cursor-pointer flex-col items-start rounded-[1.25rem] border border-white/80 bg-white p-4 text-left shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-0.5 hover:border-brand-green/30 hover:shadow-[var(--shadow-elevated)] active:scale-[0.99] ${
-            tool.wide ? 'col-span-2' : ''
+          const className = `cursor-pointer rounded-[1.25rem] border border-white/80 bg-white p-4 text-left shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-0.5 hover:border-brand-green/30 hover:shadow-[var(--shadow-elevated)] active:scale-[0.99] ${
+            tool.wide ? 'col-span-2 flex items-center gap-3' : 'flex flex-col items-start'
           }`
           const body = (
             <>
-              <span className={`flex size-11 items-center justify-center rounded-2xl ${tool.iconClass}`}>
+              <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${tool.iconClass}`}>
                 <Icon size={20} />
               </span>
-              <span className="mt-3 text-sm font-semibold leading-snug text-text">{tool.title}</span>
-              <span className="mt-1 text-xs leading-snug text-text-secondary">{tool.subtitle}</span>
+              <span className={tool.wide ? 'min-w-0' : ''}>
+                <span className={`block text-sm font-semibold leading-snug text-text ${tool.wide ? '' : 'mt-3'}`}>{tool.title}</span>
+                <span className="mt-1 block text-xs leading-snug text-text-secondary">{tool.subtitle}</span>
+              </span>
             </>
           )
           if (tool.to) {

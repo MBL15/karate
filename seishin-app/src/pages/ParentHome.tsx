@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { parentApi } from '../api/parent'
 import type { HistoryEntry, NextTraining, ParentChildHome } from '../api/types'
@@ -10,13 +10,12 @@ import { ParentPageShell } from '../components/parent/ParentPageShell'
 import { ParentError, ParentLoading } from '../components/parent/ParentScreenState'
 import { BeltProgressRing } from '../components/ui/BeltProgressRing'
 import { DashboardCard } from '../components/ui/DashboardCard'
-import { IconArrowRight, IconAward, IconBell, IconCalendar, IconCheck, IconFolder, IconTrophy, IconUser } from '../components/ui/Icons'
+import { IconArrowRight, IconBell, IconCalendar, IconCheck, IconTrophy } from '../components/ui/Icons'
 import { ProgressBar } from '../components/ui/ProgressBar'
-import { QuickActions } from '../components/ui/QuickActions'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { useAuth } from '../context/AuthContext'
 import { useParentChild } from '../context/ParentChildContext'
-import { attendanceDayClass, attendanceStatusLabel, formatDate, paymentStatusUi } from '../utils/format'
+import { attendanceDayClass, attendanceStatusLabel, beltPhrase, formatDate, paymentStatusUi } from '../utils/format'
 import { beltNextDisplayName, beltProgressValue, beltShowsPercent } from '../utils/beltProgress'
 
 function BeltProgressPanel({ home }: { home: ParentChildHome }) {
@@ -28,14 +27,14 @@ function BeltProgressPanel({ home }: { home: ParentChildHome }) {
         <BeltProgressRing
           variant="card"
           value={beltProgressValue(home)}
-          beltName={home.beltName}
+          beltName={home.beltName?.trim() || 'Не назначен'}
           nextLabel={nextLabel}
           showPercent={showPct}
           centerCaption="Тренер"
         />
         <div className="min-w-0 flex-1 text-center sm:text-left">
           <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Текущий уровень</p>
-          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-text">{home.beltName} пояс</h2>
+          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-text">{beltPhrase(home.beltName)}</h2>
           <p className="mt-2 text-sm text-text-secondary">{home.progressLabel}</p>
           {showPct && (
             <div className="mt-5">
@@ -55,7 +54,8 @@ function BeltProgressPanel({ home }: { home: ParentChildHome }) {
   )
 }
 
-function formatTrainingTime(value: string) {
+function formatTrainingTime(value?: string | null) {
+  if (!value) return ''
   return value.length >= 5 ? value.slice(0, 5) : value
 }
 
@@ -156,6 +156,7 @@ export function ParentHome() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [alertsOpen, setAlertsOpen] = useState(false)
+  const homeRequest = useRef(0)
 
   const loadHome = useCallback(() => {
     if (!selectedChildId) {
@@ -164,38 +165,40 @@ export function ParentHome() {
       setLoading(false)
       return
     }
+    const requestId = ++homeRequest.current
     setLoading(true)
     setError(null)
     Promise.all([parentApi.home(selectedChildId), parentApi.history(selectedChildId)])
       .then(([homeData, historyData]) => {
+        if (requestId !== homeRequest.current) return
         setHome(homeData)
-        setHistory(historyData)
+        setHistory(Array.isArray(historyData) ? historyData : [])
       })
-      .catch((e) => setError(e instanceof ApiError ? e.message : 'Ошибка загрузки'))
-      .finally(() => setLoading(false))
+      .catch((e) => {
+        if (requestId !== homeRequest.current) return
+        setError(e instanceof ApiError ? e.message : 'Ошибка загрузки')
+      })
+      .finally(() => {
+        if (requestId === homeRequest.current) setLoading(false)
+      })
   }, [selectedChildId])
 
   useEffect(() => {
     loadHome()
   }, [loadHome])
 
-  const competition = home?.upcomingCompetitions[0]
-  const payment = home?.recentPayments[0]
-  const unpaid = home?.recentPayments.filter((item) => item.status !== 'PAID') ?? []
-  const hasAlert = Boolean(home?.nextTraining) || (home?.upcomingCompetitions.length ?? 0) > 0 || unpaid.length > 0
+  const competitions = home?.upcomingCompetitions ?? []
+  const payments = home?.recentPayments ?? []
+  const competition = competitions[0]
+  const payment = payments[0]
+  const unpaid = payments.filter((item) => item.status !== 'PAID')
+  const hasAlert = Boolean(home?.nextTraining) || competitions.length > 0 || unpaid.length > 0
   const subtitle = selectedChild
-    ? `${selectedChild.firstName} · ${selectedChild.age} лет · ${selectedChild.beltName} пояс`
+    ? `${selectedChild.firstName} · ${selectedChild.age} лет · ${beltPhrase(selectedChild.beltName)}`
     : 'Выберите ребёнка в боковой панели'
 
   const paymentAccent =
     payment?.status === 'OVERDUE' ? 'red' : payment?.status === 'PENDING' ? 'amber' : 'green'
-
-  const quickActions = [
-    { to: '/app/profile', label: 'Профиль', icon: IconUser, tone: 'navy' as const },
-    { to: '/app/achievements', label: 'Награды', icon: IconAward, tone: 'gold' as const },
-    { to: '/app/competition', label: 'Турниры', icon: IconTrophy, tone: 'blue' as const },
-    { to: '/app/history', label: 'Архив', icon: IconFolder, tone: 'ink' as const },
-  ]
 
   const paymentLabel = payment
     ? payment.status === 'PAID'
@@ -228,7 +231,7 @@ export function ParentHome() {
             <div className="mb-5 min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Karate Hub</p>
               <h2 className="mt-2 font-display text-2xl leading-tight font-semibold text-white">
-                {user?.name.split(' ')[0] ?? 'Родитель'}
+                {user?.name?.split(' ')[0] || 'Родитель'}
               </h2>
               <p className="mt-1 text-sm leading-snug text-white/70">{subtitle}</p>
             </div>
@@ -256,7 +259,7 @@ export function ParentHome() {
               <div className="fade-in-up flex flex-col items-center">
                 <BeltProgressRing
                   value={beltProgressValue(home)}
-                  beltName={home.beltName}
+                  beltName={home.beltName?.trim() || 'Не назначен'}
                   nextLabel={beltNextDisplayName(home)}
                   size={148}
                   showPercent={beltShowsPercent(home)}
@@ -294,13 +297,6 @@ export function ParentHome() {
         <ParentError message="Привяжите ребёнка по коду от тренера" />
       ) : (
         <>
-          <div className="fade-in-up stagger-1">
-            <SectionHeader title="Быстрый доступ" subtitle="Один тап — нужный раздел" />
-            <div className="mt-3">
-              <QuickActions actions={quickActions} />
-            </div>
-          </div>
-
           {home.nextTraining && selectedChildId && (
             <div className="fade-in-up stagger-1">
               <SectionHeader title="Тренировка" subtitle="Сообщите тренеру заранее" />
@@ -383,8 +379,8 @@ export function ParentHome() {
 
               <DashboardCard
                 label="Профиль"
-                title={home.fullName.split(' ')[0]}
-                description={`${home.age} лет · ${home.beltName.toLowerCase()} пояс`}
+                title={home.fullName?.split(' ')[0] || 'Ребёнок'}
+                description={`${home.age} лет · ${beltPhrase(home.beltName)}`}
                 icon={<IconCalendar size={18} />}
                 accent="blue"
                 to="/app/profile"

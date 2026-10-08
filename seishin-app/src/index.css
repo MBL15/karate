@@ -103,6 +103,13 @@ html {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  .page-transition,
+  .fade-in-up {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 body {
@@ -112,7 +119,7 @@ body {
   background-image:
     radial-gradient(980px 460px at -8% -10%, rgb(184 134 11 / 0.1), transparent 58%),
     radial-gradient(760px 380px at 110% -6%, rgb(26 35 50 / 0.06), transparent 52%);
-  background-attachment: fixed;
+  background-attachment: scroll;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -128,11 +135,9 @@ body {
 
 @keyframes page-enter {
   from {
-    opacity: 0;
     transform: translateY(14px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -476,6 +481,11 @@ body {
 html.native-app {
   scroll-padding-top: calc(5rem + var(--safe-top-effective));
   scroll-padding-bottom: calc(6rem + var(--safe-bottom));
+}
+
+html.native-app .page-transition,
+html.native-app .fade-in-up {
+  animation: none;
 }
 
 html.native-app body {

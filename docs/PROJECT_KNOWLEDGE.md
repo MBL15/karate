@@ -37,6 +37,28 @@ karate/
 - Spring отдаёт статику; **клиентские маршруты** — через `SpaForwardController` → `index.html`.
 - Docker-сборка фронта отдельная; закоммиченный `static/` в образе может игнорироваться.
 
+### Продакшен-сервер (VPS)
+
+| | |
+|--|--|
+| **URL** | http://195.209.221.13 |
+| **IP** | 195.209.221.13 |
+| **SSH** | `ubuntu@195.209.221.13` (ключ `privatekey-1147315.pem`, не в git) |
+| **Стек** | nginx (:80) → Spring Boot (:8080), unit `seishin` |
+| **Данные** | H2 на диске: `/var/lib/seishin/data` |
+| **Health** | `GET /health` |
+
+Полная инструкция деплоя, сборки с `VITE_API_URL` и APK: **[deploy/README.md](../deploy/README.md)**.
+
+```powershell
+# веб + JAR на сервер
+cd seishin-app; $env:VITE_API_URL="http://195.209.221.13"; npm run build
+cd ..\seishin-backend; .\gradlew.bat bootJar -x test
+cd ..\deploy; .\deploy.ps1
+```
+
+Мобильная сборка: `seishin-app/.env.mobile` с тем же `VITE_API_URL`, затем `npm run android:apk`.
+
 ### Локальный запуск
 
 | Команда | URL |
@@ -233,9 +255,10 @@ cd seishin-backend
 | JWT | `security/JwtAuthenticationFilter.java`, `JwtProperties.java` |
 | Seed | `seed/DataSeeder.java` |
 | SPA fallback | `config/SpaForwardController.java` |
-| CORS | `config/WebConfig` / application properties |
+| CORS | `config/CorsConfig.java`, `application.properties`, `deploy/application-prod.properties` |
 | Vite proxy | `seishin-app/vite.config.ts` |
 | Capacitor | `seishin-app/capacitor.config.ts`, `MOBILE.md` |
+| VPS / деплой | `deploy/README.md`, `deploy/deploy.ps1` |
 
 ---
 

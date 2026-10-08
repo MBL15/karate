@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { SkipLink } from '../components/a11y/SkipLink'
 import { LogoutButton } from '../components/auth/LogoutButton'
-import { CoachBeltSettingsSheet } from '../components/coach/CoachBeltSettingsSheet'
 import { CoachCreateSheet } from '../components/coach/CoachCreateSheet'
 import { CoachMobileNav } from '../components/coach/CoachMobileNav'
 import { CoachSidebar } from '../components/coach/CoachSidebar'
@@ -14,7 +13,6 @@ export function CoachLayout() {
   const { pathname } = useLocation()
   const isSecretPage = pathname.endsWith('/secret')
   const [createOpen, setCreateOpen] = useState(false)
-  const [beltSettingsOpen, setBeltSettingsOpen] = useState(false)
 
   return (
     <div className="coach-app-canvas min-h-screen">
@@ -51,12 +49,7 @@ export function CoachLayout() {
       </div>
 
       <CoachMobileNav createOpen={createOpen} onToggleCreate={() => setCreateOpen((open) => !open)} />
-      <CoachCreateSheet
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onOpenBeltSettings={() => setBeltSettingsOpen(true)}
-      />
-      <CoachBeltSettingsSheet open={beltSettingsOpen} onClose={() => setBeltSettingsOpen(false)} />
+      <CoachCreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   )
 }

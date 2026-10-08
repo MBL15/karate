@@ -15,6 +15,7 @@ alwaysApply: true
 - `seishin-backend` — Spring Boot, Gradle, H2 in-memory в режиме PostgreSQL. Пакет `com.seishin`: `domain`, `repository`, `service`, `web`, `security`, `config`, `seed`.
 - `npm run build` пишет SPA в `seishin-backend/src/main/resources/static` (`emptyOutDir: true`). Spring отдаёт эту статику. `SpaForwardController` отдаёт `index.html` на клиентские маршруты.
 - Docker пересобирает фронт сам и игнорирует закоммиченный `static/`.
+- Продакшен VPS: http://195.209.221.13 — деплой и SSH: `deploy/README.md`.
 
 ## Запуск
 

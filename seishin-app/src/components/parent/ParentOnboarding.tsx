@@ -32,7 +32,7 @@ export function ParentOnboarding() {
   const [error, setError] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const firstName = user?.name.split(' ')[0] ?? 'Родитель'
+  const firstName = user?.name?.split(' ')[0] || 'Родитель'
 
   useEffect(() => {
     if (searchParams.get('link') === '1') {

@@ -163,7 +163,7 @@ export function CoachDashboard() {
 
   const pendingPayments = dashboard?.pendingPayments ?? 0
   const pendingRsvps = dashboard?.pendingCompetitionRsvps ?? 0
-  const firstName = user?.name.split(' ')[0] ?? 'Тренер'
+  const firstName = user?.name?.split(' ')[0] || 'Тренер'
 
   const sendReminders = async () => {
     try {
@@ -176,29 +176,26 @@ export function CoachDashboard() {
 
   return (
     <div className="mx-auto w-full max-w-lg px-5 pb-6 pt-[max(1.5rem,var(--safe-top-effective))] lg:max-w-3xl lg:px-8 lg:pt-8">
-      <header className="coach-mobile-hero flex items-start justify-between gap-4">
-        <div className="relative z-10 min-w-0">
-          <p className="font-display text-[1.65rem] leading-tight font-semibold tracking-tight text-white lg:text-text">
-            {greeting(today)},
-            <br />
-            {firstName}
-          </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[15px] font-medium leading-tight text-text">{greeting(today)},</p>
+          <h1 className="font-display text-[1.85rem] font-semibold leading-none tracking-tight text-text">{firstName}</h1>
+          <p className="mt-1.5 text-sm text-text-secondary">{dashboard?.clubName ?? 'Клуб'}</p>
           {dashboard?.joinCode && (
-            <p className="mt-3 inline-flex items-center rounded-xl border border-[#f0d078]/45 bg-white/10 px-3 py-1.5 font-mono text-lg font-bold tracking-[0.28em] text-[#f6e7b0] lg:border-brand-green/30 lg:bg-brand-green-light lg:text-navy-950">
-              <span className="sr-only">Код клуба </span>
-              {dashboard.joinCode}
+            <p className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#fff4d6] px-3 py-1.5">
+              <span className="text-xs font-semibold text-text-secondary">Код клуба</span>
+              <span className="font-mono text-base font-bold tracking-[0.22em] text-navy-950">{dashboard.joinCode}</span>
             </p>
           )}
-          <p className="mt-1 text-sm text-white/75 lg:text-text-secondary">{dashboard?.clubName ?? 'Клуб'}</p>
         </div>
-        <div className="relative z-10">
+        <div className="relative">
           <button
             type="button"
             aria-expanded={accountOpen}
             aria-haspopup="menu"
             aria-label="Аккаунт тренера"
             onClick={() => setAccountOpen((open) => !open)}
-            className="flex size-12 items-center justify-center overflow-hidden rounded-full bg-[linear-gradient(160deg,#f6e7b0,#c4961a)] font-display text-base font-semibold text-navy-950 shadow-[0_8px_18px_rgb(184_134_11_/_0.35)] ring-2 ring-white/80"
+            className="flex size-12 items-center justify-center overflow-hidden rounded-full bg-[linear-gradient(160deg,#f6e7b0,#c4961a)] font-display text-base font-semibold text-navy-950 shadow-[0_6px_16px_rgb(184_134_11_/_0.28)] ring-2 ring-white"
           >
             <span className="sr-only">{user?.name}</span>
             {firstName.slice(0, 1).toUpperCase()}
@@ -216,7 +213,7 @@ export function CoachDashboard() {
         </div>
       </header>
 
-      <div className="mt-5 grid grid-cols-3 rounded-full border border-white/80 bg-white p-1 shadow-[var(--shadow-card)]" role="tablist" aria-label="Период">
+      <div className="mt-5 grid grid-cols-3 rounded-full bg-[#eceae4] p-1" role="tablist" aria-label="Период">
         {(
           [
             ['groups', 'Группы'],
@@ -230,9 +227,9 @@ export function CoachDashboard() {
             role="tab"
             aria-selected={range === id}
             onClick={() => setRange(id)}
-            className={`min-h-11 cursor-pointer rounded-full text-sm font-semibold transition duration-200 ${
+            className={`min-h-10 cursor-pointer rounded-full text-sm font-semibold transition duration-200 ${
               range === id
-                ? 'bg-[#f0d078] text-navy-950 shadow-[0_6px_16px_rgb(184_134_11_/_0.28)]'
+                ? 'bg-[#f5c518] text-navy-950 shadow-[0_4px_12px_rgb(184_134_11_/_0.22)]'
                 : 'text-text-secondary hover:text-text'
             }`}
           >
@@ -259,7 +256,7 @@ export function CoachDashboard() {
 
           {range === 'groups' ? (
             <section className="mt-5 space-y-3" aria-label="Группы">
-              {dashboard.groups.length === 0 ? (
+              {(dashboard.groups ?? []).length === 0 ? (
                 <p className="flex flex-col items-center gap-3 rounded-2xl border border-white/80 bg-white px-4 py-8 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
                   <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-green-light text-[#a16207]">
                     <IconUsers size={22} />
@@ -267,13 +264,13 @@ export function CoachDashboard() {
                   Групп пока нет
                 </p>
               ) : (
-                dashboard.groups.map((group) => (
+                (dashboard.groups ?? []).map((group) => (
                   <Link
                     key={group.id}
                     to={`/coach/students?group=${group.id}`}
                     className="panel flex items-center gap-3"
                   >
-                    <span className="flex size-11 items-center justify-center rounded-2xl bg-[#dbe7fb] text-[#1d4e89]">
+                    <span className="flex size-11 items-center justify-center rounded-full bg-[#dbe7fb] text-[#1d4e89]">
                       <IconUsers size={20} />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -290,7 +287,7 @@ export function CoachDashboard() {
           ) : (
             <section className="mt-5" aria-label={range === 'today' ? 'Занятия сегодня' : 'Занятия недели'}>
               {range === 'today' && (
-                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{formatDay(todayIso)}</h2>
+                <h2 className="text-[15px] font-medium text-text">{formatDay(todayIso)}</h2>
               )}
               {visibleClasses.length === 0 ? (
                 <p className="mt-3 flex flex-col items-center gap-3 rounded-2xl border border-white/80 bg-white px-4 py-8 text-center text-sm text-text-secondary shadow-[var(--shadow-card)]">
@@ -304,7 +301,7 @@ export function CoachDashboard() {
                   {Object.keys(classesByDate).map((date) => (
                     <div key={date}>
                       {range === 'week' && (
-                        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{formatDay(date)}</h2>
+                        <h2 className="mb-3 text-[15px] font-medium text-text">{formatDay(date)}</h2>
                       )}
                       <ul className="space-y-3">
                         {classesByDate[date].map((event, index) => {
@@ -319,6 +316,7 @@ export function CoachDashboard() {
                               : 0
                           const percent = total > 0 ? Math.round((present / total) * 100) : 0
                           const tone = tones[index % tones.length]
+                          const statusLabel = upcomingClass ? 'будут' : marked ? 'присутствуют' : 'не отмечено'
                           return (
                             <li key={classKey(event)}>
                               <Link
@@ -331,33 +329,33 @@ export function CoachDashboard() {
                                   </span>
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-start justify-between gap-3">
-                                      <p className="text-sm font-semibold text-text">{timeRange(event)}</p>
-                                      <p className="shrink-0 text-sm font-semibold text-text">
-                                        {upcomingClass || marked ? `${present} / ${total}` : total}
-                                      </p>
-                                    </div>
-                                    <p className="mt-0.5 font-semibold text-text">{event.groupName}</p>
-                                    <p className="text-sm text-text-secondary">{event.location || 'Зал клуба'}</p>
-                                    <div className="mt-3">
-                                      <div
-                                        className="h-1.5 overflow-hidden rounded-full bg-[#e7f6ee]"
-                                        role="progressbar"
-                                        aria-valuenow={percent}
-                                        aria-valuemin={0}
-                                        aria-valuemax={100}
-                                        aria-label={
-                                          upcomingClass
-                                            ? `Будут ${present} из ${total} по ответам родителей`
-                                            : marked
-                                              ? `Присутствуют ${present} из ${total}`
-                                              : 'Посещаемость не отмечена'
-                                        }
-                                      >
-                                        <div className="h-full rounded-full bg-[#3dae6b]" style={{ width: `${percent}%` }} />
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-text">{timeRange(event)}</p>
+                                        <p className="mt-0.5 font-semibold text-text">{event.groupName}</p>
+                                        <p className="text-sm text-text-secondary">{event.location || 'Зал клуба'}</p>
                                       </div>
-                                      <p className="mt-1.5 text-xs text-text-muted">
-                                        {upcomingClass ? 'будут (родители)' : marked ? 'присутствуют' : 'ещё не отмечено'}
-                                      </p>
+                                      <div className="shrink-0 text-right">
+                                        <p className="text-base font-bold leading-none text-text">
+                                          {present} / {total}
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-text-muted">{statusLabel}</p>
+                                      </div>
+                                    </div>
+                                    <div
+                                      className="mt-3 h-2 overflow-hidden rounded-full bg-[#e7f6ee]"
+                                      role="progressbar"
+                                      aria-valuenow={percent}
+                                      aria-valuemin={0}
+                                      aria-valuemax={100}
+                                      aria-label={
+                                        upcomingClass
+                                          ? `Будут ${present} из ${total} по ответам родителей`
+                                          : marked
+                                            ? `Присутствуют ${present} из ${total}`
+                                            : 'Посещаемость не отмечена'
+                                      }
+                                    >
+                                      <div className="h-full rounded-full bg-[#3dae6b]" style={{ width: `${percent}%` }} />
                                     </div>
                                   </div>
                                 </div>
@@ -378,7 +376,7 @@ export function CoachDashboard() {
               <h2 id="attention-title" className="font-display text-base font-semibold tracking-tight text-text">
                 Что требует внимания
               </h2>
-              <Link to="/coach/attendance" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-text-secondary">
+              <Link to="/coach/attendance" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#c4a035]">
                 Все
                 <IconArrowRight size={14} />
               </Link>
@@ -391,7 +389,7 @@ export function CoachDashboard() {
                     onClick={() => void sendReminders()}
                     className="panel flex w-full items-center gap-3 py-3 text-left"
                   >
-                    <span className="flex size-10 items-center justify-center rounded-xl bg-[#fde8e8] text-[#d94b55]">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-[#fde8e8] text-[#d94b55]">
                       <IconClipboard size={18} />
                     </span>
                     <span className="min-w-0 flex-1 text-sm font-medium text-text">
@@ -407,7 +405,7 @@ export function CoachDashboard() {
                     to="/coach/attendance"
                     className="panel flex items-center gap-3 py-3"
                   >
-                    <span className="flex size-10 items-center justify-center rounded-xl bg-[#fff4d6] text-[#b8860b]">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-[#fff4d6] text-[#b8860b]">
                       <IconUsers size={18} />
                     </span>
                     <span className="min-w-0 flex-1 text-sm font-medium text-text">
@@ -424,7 +422,7 @@ export function CoachDashboard() {
                     to="/coach/competitions"
                     className="panel flex items-center gap-3 py-3"
                   >
-                    <span className="flex size-10 items-center justify-center rounded-xl bg-[#dbe7fb] text-[#1d4e89]">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-[#f8e7b0] text-[#a16207]">
                       <IconTrophy size={18} />
                     </span>
                     <span className="min-w-0 flex-1 text-sm font-medium text-text">

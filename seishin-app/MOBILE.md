@@ -51,7 +51,9 @@ cd seishin-backend
 |-------|----------------|
 | Эмулятор Android | `http://10.0.2.2:8080` |
 | Реальное устройство (Wi‑Fi) | `http://<IP-вашего-ПК>:8080` |
-| Продакшен | `https://your-server.example.com` |
+| Продакшен (VPS) | `http://195.209.221.13` |
+
+Текущий VPS и деплой: [deploy/README.md](../deploy/README.md).
 
 3. Пересоберите: `npm run cap:sync`
 
