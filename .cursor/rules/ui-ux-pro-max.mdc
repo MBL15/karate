@@ -1,0 +1,31 @@
+---
+description: Use UI/UX Pro Max skill for interface design, UX improvements, and visual polish in this project
+globs: seishin-app/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# UI/UX Pro Max — Karate Hub
+
+When editing UI in `seishin-app`, read and follow the skill at `.cursor/skills/ui-ux-pro-max/SKILL.md`.
+
+## When to activate
+
+- New pages, components, or layout changes
+- UX review, accessibility, responsive fixes
+- Design system, colors, typography, charts
+
+## Workflow
+
+1. Read `.cursor/skills/ui-ux-pro-max/SKILL.md`
+2. Run design searches from project skill folder:
+
+```bash
+python .cursor/skills/ui-ux-pro-max/scripts/search.py "sports parent dashboard mobile" --design-system -p "Karate Hub"
+python .cursor/skills/ui-ux-pro-max/scripts/search.py "responsive layout" --stack html-tailwind
+```
+
+3. Apply results to existing tokens in `seishin-app/src/index.css` — do not invent a parallel design system.
+
+## Stack
+
+React + Vite + Tailwind CSS v4. Match existing navy/green brand colors unless the user asks for a rebrand.

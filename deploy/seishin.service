@@ -1,0 +1,15 @@
+[Unit]
+Description=Karate Hub (Seishin) Spring Boot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/seishin
+ExecStart=/usr/bin/java -jar /opt/seishin/karate-hub.jar --spring.config.additional-location=file:/opt/seishin/application-prod.properties
+Restart=on-failure
+RestartSec=10
+Environment=JAVA_OPTS=-Xms256m -Xmx1024m
+
+[Install]
+WantedBy=multi-user.target

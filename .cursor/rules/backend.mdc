@@ -1,0 +1,29 @@
+---
+description: Слои, модель данных и HTTP API бэкенда Karate Hub
+globs: seishin-backend/**/*.java
+alwaysApply: false
+---
+
+# Backend
+
+Контроллер вызывает сервис, сервис — репозиторий. DTO лежат в `web/dto`, сущности в `domain/entity`. Ошибки перехватывает `GlobalExceptionHandler`: `NotFoundException`, `ForbiddenException`, `BadRequestException`, `UnauthorizedException`.
+
+## Данные
+
+`Club` связывает тренеров (`User.club`), учеников, группы, пояса, бейджи, соревнования, платежи и шаблоны документов.
+
+Связи: `ParentStudentLink` (код клуба многоразовый, родитель вводит его и создаёт ребёнка), `GroupStudent`, `GroupAssistant`. Расписание `ClassSchedule` порождает `TrainingSession` и `AttendanceRecord` со статусами `PRESENT`, `ABSENT`, `MAKEUP`, `GUEST`.
+
+Прогресс: лестница `BeltLevel` и выдача `StudentBadge` по `BadgeDefinition`. Соревнование хранит `CompetitionRegistration`: RSVP, вес, дисциплина `KATA` / `KUMITE` / `TEAM`, авто-категория. Чат: личка `ChatMessage` по ученику и группа `ChatGroup` + `ChatGroupMember` + `ChatGroupMessage`.
+
+`DataSeeder` заполняет H2 при старте. `ddl-auto=update`, база в памяти: после перезапуска остаются только посеянные данные.
+
+## API, префикс `/api`
+
+- Auth: `POST /auth/register`, `POST /auth/login` (логин и пароль → JWT), `/auth/profile` (тренер после регистрации), `/auth/invite/link` (только PARENT).
+- Coach: dashboard, students, groups, attendance, badges, belts, invite-codes, schedule, classes и reminders, чаты.
+- Соревнования тренера: `/coach/competitions` — список, создание, карточка, auto-categorize, правка категории, `export.xlsx`.
+- Parent: children (включая создание), home, profile, achievements, history, payments, competitions и RSVP, documents, чаты.
+- Payments: `GET /payments` режет выборку по роли. `PATCH /payments/{id}` и `POST /payments/reminders` — только тренер.
+
+Полная таблица методов — в `seishin-backend/README.md`. Секрет JWT задан в `application.properties` и годится только для локального запуска. Демо: `coach` / `coach123`, `parent` / `parent123`.
