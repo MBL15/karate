@@ -213,7 +213,7 @@ public class ScheduleService {
                 .startTime(slot.getStartTime())
                 .endTime(slot.getEndTime())
                 .location(slot.getLocation())
-                .studentCount(groupStudentRepository.findByGroupId(slot.getGroup().getId()).size())
+                .studentCount(activeStudents(slot.getGroup().getId()))
                 .build();
     }
 
@@ -227,10 +227,16 @@ public class ScheduleService {
                 .startTime(slot.getStartTime())
                 .endTime(slot.getEndTime())
                 .location(slot.getLocation())
-                .studentCount(groupStudentRepository.findByGroupId(slot.getGroup().getId()).size())
+                .studentCount(activeStudents(slot.getGroup().getId()))
                 .today(today)
                 .upcoming(upcoming)
                 .build();
+    }
+
+    private int activeStudents(Long groupId) {
+        return (int) groupStudentRepository.findByGroupId(groupId).stream()
+                .filter(link -> link.getStudent().getLeftAt() == null)
+                .count();
     }
 
     private static String weekdayLabel(int weekday) {

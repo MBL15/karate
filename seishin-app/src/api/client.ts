@@ -1,3 +1,4 @@
+import { clearPersistedAuth, readAuthRaw } from '../utils/authStorage'
 import { isNativeApp } from '../utils/platform'
 import { markSessionExpired } from '../utils/session'
 
@@ -16,7 +17,7 @@ export class ApiError extends Error {
 
 export function getStoredToken(): string | null {
   try {
-    const raw = localStorage.getItem('seishin-auth')
+    const raw = readAuthRaw()
     if (!raw) return null
     const parsed = JSON.parse(raw) as { token?: string }
     return parsed.token ?? null
@@ -44,7 +45,7 @@ export function tokenExpired(token: string): boolean {
 
 function endSession() {
   markSessionExpired()
-  localStorage.removeItem('seishin-auth')
+  void clearPersistedAuth()
   window.dispatchEvent(new Event('seishin-unauthorized'))
 }
 

@@ -12,4 +12,5 @@ public class HistoryEntryDto {
     private LocalDate date;
     private String groupName;
     private AttendanceStatus status;
+    private String absenceReason;
 }

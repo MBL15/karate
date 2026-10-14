@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { coachApi } from '../../../api/coach'
 import type { ClassEvent, Payment, SessionAttendance } from '../../../api/types'
+import { useCoachIssuedBadges } from '../../../hooks/useCoachIssuedBadges'
 import { useStoredState } from '../../../hooks/useStoredState'
 import { IconAward, IconCheck, IconChevronDown } from '../../ui/Icons'
 import {
-  BADGES_KEY,
   badgesOf,
   classKey,
   initials,
@@ -16,7 +16,6 @@ import {
   shiftMonth,
   shortDate,
   toIso,
-  type IssuedBadge,
   type LocalMarks,
   type PaidMonths,
 } from './helpers'
@@ -57,7 +56,7 @@ export function MonthJournal({
   const [unpayFor, setUnpayFor] = useState<number | null>(null)
   const [paid, setPaid] = useStoredState<PaidMonths>(PAID_KEY, {})
   const [localMarks] = useStoredState<LocalMarks>(MARKS_KEY, {})
-  const [badges] = useStoredState<IssuedBadge[]>(BADGES_KEY, [])
+  const { issued: badges } = useCoachIssuedBadges()
   const currentMonth = toIso(new Date()).slice(0, 7)
 
   useEffect(() => {
@@ -106,17 +105,27 @@ export function MonthJournal({
   }
 
   const syncServer = (studentId: number, m: string, isPaid: boolean) => {
-    const p = serverPaymentFor(studentId, m)
-    if (!p) return
-    const status: Payment['status'] = isPaid ? 'PAID' : p.dueDate < toIso(new Date()) ? 'OVERDUE' : 'PENDING'
-    if (p.status === status) return
-    coachApi
-      .updatePayment(p.id, status, isPaid ? toIso(new Date()) : undefined)
-      .then((saved) => {
-        setSyncError(null)
-        setServerPayments((list) => list.map((x) => (x.id === saved.id ? saved : x)))
-      })
-      .catch(() => setSyncError('Не удалось передать отметку об оплате на сервер — родитель пока видит старый статус. Отметьте ещё раз позже.'))
+    void (async () => {
+      let p = serverPaymentFor(studentId, m)
+      if (!p) {
+        try {
+          p = await coachApi.ensureMonthlyPayment(studentId, m)
+          setServerPayments((list) => (list.some((x) => x.id === p!.id) ? list : [...list, p!]))
+        } catch {
+          setSyncError('Не удалось создать запись об оплате на сервере — родитель не увидит отметку.')
+          return
+        }
+      }
+      const status: Payment['status'] = isPaid ? 'PAID' : p.dueDate < toIso(new Date()) ? 'OVERDUE' : 'PENDING'
+      if (p.status === status) return
+      coachApi
+        .updatePayment(p.id, status, isPaid ? toIso(new Date()) : undefined)
+        .then((saved) => {
+          setSyncError(null)
+          setServerPayments((list) => list.map((x) => (x.id === saved.id ? saved : x)))
+        })
+        .catch(() => setSyncError('Не удалось передать отметку об оплате на сервер — родитель пока видит старый статус. Отметьте ещё раз позже.'))
+    })()
   }
 
   const statusOf = (event: ClassEvent, studentId: number): Status => {

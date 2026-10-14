@@ -1,10 +1,11 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import type { Competition } from '../../api/types'
-import { useStoredState } from '../../hooks/useStoredState'
+import { coachApi } from '../../api/coach'
+import { ApiError } from '../../api/client'
 import { ageText } from '../../utils/format'
-import { PLACE_UI, PLACES, RESULTS_KEY, type CompetitionResults, type ResultPlace } from '../../utils/competitionResults'
+import { PLACE_UI, PLACES, type ResultPlace } from '../../utils/competitionResults'
 import { BottomSheet } from '../ui/BottomSheet'
-import { IconCheck, IconX } from '../ui/Icons'
+import { IconX } from '../ui/Icons'
 
 function todayIso() {
   const d = new Date()
@@ -13,43 +14,59 @@ function todayIso() {
 
 const DISCIPLINE: Record<string, string> = { KATA: 'Ката', KUMITE: 'Кумитэ', TEAM: 'Команда' }
 
-export function CompetitionResultsSheet({ competition: current, onClose }: { competition: Competition | null; onClose: () => void }) {
+export function CompetitionResultsSheet({
+  competition: current,
+  onClose,
+  onDelete,
+  deleting = false,
+  onUpdated,
+}: {
+  competition: Competition | null
+  onClose: () => void
+  onDelete?: () => void
+  deleting?: boolean
+  onUpdated?: () => void
+}) {
   const titleId = useId()
-  const [results, setResults] = useStoredState<CompetitionResults>(RESULTS_KEY, {})
   const [savedFlash, setSavedFlash] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [last, setLast] = useState(current)
   if (current && current !== last) setLast(current)
   const competition = current ?? last
 
   const open = current != null
   const started = competition ? competition.eventDate <= todayIso() : false
-  const participants = (competition?.registrations ?? [])
-    .filter((r) => r.rsvpStatus === 'CONFIRMED')
-    .sort((a, b) => a.studentName.localeCompare(b.studentName, 'ru'))
-  const filled = participants.filter((r) => results[r.id]).length
+  const participants = useMemo(
+    () =>
+      (competition?.registrations ?? [])
+        .filter((r) => r.rsvpStatus === 'CONFIRMED')
+        .sort((a, b) => a.studentName.localeCompare(b.studentName, 'ru')),
+    [competition],
+  )
+  const filled = participants.filter((r) => r.resultPlace != null).length
 
   const setResult = (registrationId: number, patch: { place?: ResultPlace; category?: string }, fallbackCategory: string) => {
-    setResults((all) => {
-      const prev = all[registrationId]
-      return {
-        ...all,
-        [registrationId]: {
-          place: patch.place ?? prev?.place ?? 0,
-          category: patch.category ?? prev?.category ?? fallbackCategory,
-          updatedAt: new Date().toISOString(),
-        },
-      }
-    })
-    setSavedFlash(true)
-    window.setTimeout(() => setSavedFlash(false), 1200)
+    const reg = participants.find((r) => r.id === registrationId)
+    const place = patch.place ?? (reg?.resultPlace as ResultPlace | undefined) ?? 0
+    const category = patch.category ?? reg?.resultCategory ?? fallbackCategory
+    setError(null)
+    void coachApi
+      .updateRegistrationResult(registrationId, place, category)
+      .then(() => {
+        setSavedFlash(true)
+        window.setTimeout(() => setSavedFlash(false), 1200)
+        onUpdated?.()
+      })
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'Не удалось сохранить итог'))
   }
 
-  const clearResult = (registrationId: number) =>
-    setResults((all) => {
-      const next = { ...all }
-      delete next[registrationId]
-      return next
-    })
+  const clearResult = (registrationId: number) => {
+    setError(null)
+    void coachApi
+      .clearRegistrationResult(registrationId)
+      .then(() => onUpdated?.())
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'Не удалось убрать итог'))
+  }
 
   return (
     <BottomSheet open={open} titleId={titleId} onClose={onClose}>
@@ -69,83 +86,79 @@ export function CompetitionResultsSheet({ competition: current, onClose }: { com
           aria-label="Закрыть"
           className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-muted text-text-secondary transition active:scale-90"
         >
-          <IconX size={16} />
+          <IconX size={18} />
         </button>
       </div>
 
+      {error && <p className="mt-3 text-sm font-medium text-error">{error}</p>}
+
       {!started ? (
-        <div className="mt-5 rounded-2xl bg-brand-blue-light/60 p-4 text-sm">
-          <p className="font-semibold text-brand-blue">Итоги можно внести в день соревнования и позже</p>
-          <p className="mt-1 text-text-secondary">
-            Подтвердили участие: {participants.length} из {competition?.registrations.length ?? 0}
-          </p>
-        </div>
+        <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm text-text-secondary">Итоги можно вносить в день соревнования и позже — родители увидят их в «Спортсмене».</p>
       ) : participants.length === 0 ? (
-        <div className="mt-5 rounded-2xl bg-surface-muted p-4 text-sm text-text-secondary">
-          Никто не подтвердил участие — вносить итоги не для кого.
-        </div>
+        <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm text-text-secondary">Нет подтвердивших участие — некому проставлять места.</p>
       ) : (
         <>
-          <div className="mt-4 flex items-center justify-between text-sm">
-            <p className="font-semibold text-text">
-              Итоги · {filled} из {participants.length}
-            </p>
-            <span className={`flex items-center gap-1 text-xs font-semibold text-brand-green transition-opacity ${savedFlash ? 'opacity-100' : 'opacity-0'}`}>
-              <IconCheck size={14} />
-              Сохранено
-            </span>
-          </div>
+          <p className="mt-3 text-xs text-text-secondary">
+            Заполнено {filled} из {participants.length}
+            {savedFlash && <span className="ml-2 font-semibold text-brand-green">Сохранено на сервере</span>}
+          </p>
           <ul className="mt-3 space-y-2">
             {participants.map((r) => {
-              const result = results[r.id]
-              const fallbackCategory = r.effectiveCategory ?? (r.discipline ? DISCIPLINE[r.discipline] : '')
+              const place = (r.resultPlace ?? null) as ResultPlace | null
+              const category = r.resultCategory ?? r.effectiveCategory ?? ''
               return (
-                <li key={r.id} className="rounded-2xl border border-border-light bg-white p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="min-w-0 truncate font-semibold text-text">{r.studentName}</p>
-                    {result && (
-                      <button type="button" onClick={() => clearResult(r.id)} className="shrink-0 text-xs font-semibold text-text-muted">
+                <li key={r.id} className="rounded-2xl border border-border-light bg-white p-3 shadow-[var(--shadow-card)]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-text">{r.studentName}</p>
+                      <p className="text-xs text-text-secondary">
+                        {ageText(r.age)}
+                        {r.discipline ? ` · ${DISCIPLINE[r.discipline] ?? r.discipline}` : ''}
+                      </p>
+                    </div>
+                    {place != null && (
+                      <button type="button" onClick={() => clearResult(r.id)} className="text-xs font-semibold text-error">
                         Сбросить
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-text-secondary">
-                    {ageText(r.age)}{r.weightKg ? ` · ${r.weightKg} кг` : ''}
-                    {r.discipline ? ` · ${DISCIPLINE[r.discipline]}` : ''}
-                  </p>
-                  <div className="mt-2.5 grid grid-cols-4 gap-1.5" role="group" aria-label={`Место: ${r.studentName}`}>
-                    {PLACES.map((place) => {
-                      const active = result?.place === place
-                      return (
-                        <button
-                          key={place}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => setResult(r.id, { place }, fallbackCategory)}
-                          className={`min-h-10 rounded-xl text-sm font-bold transition active:scale-95 ${
-                            active ? `${PLACE_UI[place].className} ring-2 ring-current` : 'bg-surface-muted text-text-secondary'
-                          }`}
-                        >
-                          {PLACE_UI[place].label}
-                        </button>
-                      )
-                    })}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {PLACES.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setResult(r.id, { place: p }, category)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition active:scale-95 ${
+                          place === p ? PLACE_UI[p].className : 'bg-surface-muted text-text-secondary'
+                        }`}
+                      >
+                        {PLACE_UI[p].label}
+                      </button>
+                    ))}
                   </div>
                   <input
-                    value={result?.category ?? ''}
-                    onChange={(e) => setResult(r.id, { category: e.target.value.slice(0, 80) }, fallbackCategory)}
-                    placeholder={fallbackCategory || 'Категория, например «9-10 / 30-34 / Ката»'}
-                    aria-label={`Категория: ${r.studentName}`}
-                    className="mt-2 min-h-10 w-full rounded-xl border border-border-light bg-white px-3 text-sm text-text outline-none focus:border-brand-blue/50 focus:ring-4 focus:ring-brand-blue/10"
+                    defaultValue={category}
+                    key={`${r.id}-${category}`}
+                    onBlur={(e) => setResult(r.id, { category: e.target.value }, category)}
+                    placeholder="Категория"
+                    className="input-coach mt-2 text-sm"
                   />
                 </li>
               )
             })}
           </ul>
-          <p className="mt-3 text-xs leading-relaxed text-text-muted">
-            Итоги сохраняются сразу. Родители увидят их в «Спортсмене», когда результаты начнут отправляться на сервер.
-          </p>
         </>
+      )}
+
+      {onDelete && (
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={onDelete}
+          className="mt-6 min-h-11 w-full rounded-2xl border border-error/30 text-sm font-semibold text-error"
+        >
+          {deleting ? 'Удаление…' : 'Удалить соревнование'}
+        </button>
       )}
     </BottomSheet>
   )

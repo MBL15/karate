@@ -10,6 +10,7 @@ ExecStart=/usr/bin/java -jar /opt/seishin/karate-hub.jar --spring.config.additio
 Restart=on-failure
 RestartSec=10
 Environment=JAVA_OPTS=-Xms256m -Xmx1024m
+Environment=TZ=Asia/Yekaterinburg
 
 [Install]
 WantedBy=multi-user.target

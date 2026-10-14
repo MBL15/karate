@@ -5,6 +5,7 @@ import { coachApi } from '../../api/coach'
 import type { Competition } from '../../api/types'
 import { ApiError } from '../../api/client'
 import { CoachPageShell } from '../../components/coach/CoachPageShell'
+import { DateField } from '../../components/ui/DateField'
 import { CompetitionResultsSheet } from '../../components/coach/CompetitionResultsSheet'
 import { useStoredState } from '../../hooks/useStoredState'
 import { RESULTS_KEY, type CompetitionResults } from '../../utils/competitionResults'
@@ -22,6 +23,12 @@ function toIsoDate(year: number, month: number, day: number) {
   return `${year}-${pad(month + 1)}-${pad(day)}`
 }
 
+function parseIsoFromField(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(y, m - 1, d)
+}
+
 export function CoachCompetitionsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const today = new Date()
@@ -36,7 +43,8 @@ export function CoachCompetitionsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [resultsFor, setResultsFor] = useState<Competition | null>(null)
-  const [results] = useStoredState<CompetitionResults>(RESULTS_KEY, {})
+  const [results, setResults] = useStoredState<CompetitionResults>(RESULTS_KEY, {})
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const todayIso = toIsoDate(today.getFullYear(), today.getMonth(), today.getDate())
 
   const load = useCallback(async () => {
@@ -103,6 +111,31 @@ export function CoachCompetitionsPage() {
     const d = new Date(year, month + delta, 1)
     setYear(d.getFullYear())
     setMonth(d.getMonth())
+  }
+
+  const deleteCompetition = async (c: Competition) => {
+    const ok = window.confirm(
+      `Удалить «${c.name}» (${dayLabel(c.eventDate)})? Приглашения и ответы родителей исчезнут.`,
+    )
+    if (!ok || deletingId != null) return
+    setDeletingId(c.id)
+    setMessage(null)
+    try {
+      await coachApi.deleteCompetition(c.id)
+      const regIds = new Set(c.registrations.map((r) => r.id))
+      setResults((all) => {
+        const next = { ...all }
+        for (const id of regIds) delete next[id]
+        return next
+      })
+      if (resultsFor?.id === c.id) setResultsFor(null)
+      setMessage({ text: 'Мероприятие удалено', ok: true })
+      await load()
+    } catch (err) {
+      setMessage({ text: err instanceof ApiError ? err.message : 'Не удалось удалить мероприятие', ok: false })
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const monthLabel = new Date(year, month, 1).toLocaleDateString('ru-RU', {
@@ -173,12 +206,41 @@ export function CoachCompetitionsPage() {
         </div>
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedDate(todayIso)
+            setShowForm(true)
+          }}
+          className="btn-coach"
+        >
+          Новое мероприятие
+        </button>
+      </div>
+
       {showForm && selectedDate && (
         <form onSubmit={createCompetition} className="card mb-6 max-w-lg p-6">
-          <p className="text-lg font-bold text-text">Новое мероприятие · {dayLabel(selectedDate)}</p>
+          <p className="text-lg font-bold text-text">Новое мероприятие</p>
+          <label className="label mt-4" htmlFor="competition-date">
+            Дата
+          </label>
+          <DateField
+            id="competition-date"
+            value={selectedDate}
+            onChange={(iso) => {
+              setSelectedDate(iso)
+              const parsed = parseIsoFromField(iso)
+              if (parsed) {
+                setYear(parsed.getFullYear())
+                setMonth(parsed.getMonth())
+              }
+            }}
+            required
+          />
           {selectedDate < todayIso && (
             <p className="mt-2 rounded-xl bg-warning-bg px-3 py-2 text-sm text-text-secondary">
-              Эта дата уже прошла — родители не увидят приглашение. Выберите сегодняшний или будущий день.
+              Эта дата уже прошла — родители не увидят приглашение. Укажите сегодняшний или будущий день.
             </p>
           )}
           <label className="label mt-4" htmlFor="competition-name">Название</label>
@@ -239,35 +301,52 @@ export function CoachCompetitionsPage() {
             const withResults = confirmed.filter((r) => results[r.id])
             const medals = ([1, 2, 3] as const).map((p) => withResults.filter((r) => results[r.id].place === p).length)
             return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setResultsFor(c)}
-                className="card border-l-4 border-l-brand-blue p-5 text-left transition hover:bg-surface-muted"
-              >
-                <p className="font-semibold text-text">{c.name}</p>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {dayLabel(c.eventDate)}
-                  {c.location ? ` · ${c.location}` : ''}
-                </p>
-                <p className="mt-2 text-xs font-medium text-brand-blue">
-                  Подтверждено: {confirmed.length} / {c.registrations.length}
-                </p>
-                {past && confirmed.length > 0 && (
-                  <p className={`mt-2 text-xs font-semibold ${withResults.length ? 'text-text' : 'text-warning'}`}>
-                    {withResults.length
-                      ? `Итоги: ${withResults.length}/${confirmed.length}` +
-                        (medals.some(Boolean) ? ` · призовых мест: ${medals[0] + medals[1] + medals[2]}` : '')
-                      : 'Внесите итоги соревнования →'}
-                  </p>
-                )}
-              </button>
+              <article key={c.id} className="card border-l-4 border-l-brand-blue p-5">
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setResultsFor(c)}
+                    className="min-w-0 flex-1 text-left transition hover:opacity-90"
+                  >
+                    <p className="font-semibold text-text">{c.name}</p>
+                    <p className="mt-1 text-sm text-text-secondary">
+                      {dayLabel(c.eventDate)}
+                      {c.location ? ` · ${c.location}` : ''}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-brand-blue">
+                      Подтверждено: {confirmed.length} / {c.registrations.length}
+                    </p>
+                    {past && confirmed.length > 0 && (
+                      <p className={`mt-2 text-xs font-semibold ${withResults.length ? 'text-text' : 'text-warning'}`}>
+                        {withResults.length
+                          ? `Итоги: ${withResults.length}/${confirmed.length}` +
+                            (medals.some(Boolean) ? ` · призовых мест: ${medals[0] + medals[1] + medals[2]}` : '')
+                          : 'Внесите итоги соревнования →'}
+                      </p>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deletingId === c.id}
+                    onClick={() => void deleteCompetition(c)}
+                    className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-error transition hover:bg-error-bg disabled:opacity-50"
+                  >
+                    {deletingId === c.id ? '…' : 'Удалить'}
+                  </button>
+                </div>
+              </article>
             )
           })}
         </div>
       </section>
 
-      <CompetitionResultsSheet competition={resultsFor} onClose={() => setResultsFor(null)} />
+      <CompetitionResultsSheet
+        competition={resultsFor}
+        onClose={() => setResultsFor(null)}
+        onDelete={resultsFor ? () => void deleteCompetition(resultsFor) : undefined}
+        deleting={resultsFor != null && deletingId === resultsFor.id}
+        onUpdated={() => void load()}
+      />
     </CoachPageShell>
   )
 }

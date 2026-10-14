@@ -2,6 +2,7 @@ package com.seishin.web.controller;
 
 import com.seishin.security.SecurityUtils;
 import com.seishin.service.PaymentService;
+import com.seishin.web.dto.payment.CreatePaymentDto;
 import com.seishin.web.dto.payment.PaymentDto;
 import com.seishin.web.dto.payment.UpdatePaymentDto;
 import jakarta.validation.Valid;
@@ -22,6 +23,11 @@ public class PaymentController {
     @GetMapping
     public ResponseEntity<List<PaymentDto>> list() {
         return ResponseEntity.ok(paymentService.listPayments(SecurityUtils.currentUser()));
+    }
+
+    @PostMapping("/monthly")
+    public ResponseEntity<PaymentDto> ensureMonthly(@Valid @RequestBody CreatePaymentDto dto) {
+        return ResponseEntity.ok(paymentService.ensureMonthlyPayment(SecurityUtils.requireCoach(), dto));
     }
 
     @PatchMapping("/{id}")

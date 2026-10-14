@@ -30,6 +30,7 @@ public class TrainingIntentService {
     private final GroupStudentRepository groupStudentRepository;
     private final StudentTrainingIntentRepository intentRepository;
     private final ParentAccessService parentAccessService;
+    private final SessionPlanService sessionPlanService;
 
     public Optional<NextTrainingDto> findNextTraining(Student student) {
         Set<Long> groupIds = groupStudentRepository.findByStudentId(student.getId()).stream()
@@ -64,6 +65,7 @@ public class TrainingIntentService {
 
     public NextTrainingDto withIntent(Student student, NextTrainingDto training) {
         RsvpStatus status = resolveIntentStatus(student, training);
+        var topics = sessionPlanService.topicsFor(training.getGroupId(), training.getDate(), training.getStartTime());
         return NextTrainingDto.builder()
                 .groupId(training.getGroupId())
                 .scheduleId(training.getScheduleId())
@@ -73,6 +75,8 @@ public class TrainingIntentService {
                 .groupName(training.getGroupName())
                 .location(training.getLocation())
                 .intentStatus(status)
+                .topicTitle(topics.map(SessionPlanService.SessionPlanTopics::topicTitle).orElse(null))
+                .topicText(topics.map(SessionPlanService.SessionPlanTopics::topicText).orElse(null))
                 .build();
     }
 

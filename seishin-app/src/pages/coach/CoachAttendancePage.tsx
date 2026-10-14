@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client'
 import { CoachPageShell } from '../../components/coach/CoachPageShell'
 import { CoachLoading } from '../../components/coach/CoachScreenState'
 import { plural } from '../../components/coach/home/helpers'
+import { DateField } from '../../components/ui/DateField'
 import { IconArrowLeft, IconCheck } from '../../components/ui/Icons'
 import { useStoredState } from '../../hooks/useStoredState'
 import { EMPTY_GROUP_EDITS, GROUP_EDITS_KEY, type GroupEdits } from '../../utils/groupEdits'
@@ -243,13 +244,7 @@ export function CoachAttendancePage() {
             <label className="label" htmlFor="attendance-date">
               Дата
             </label>
-            <input
-              id="attendance-date"
-              type="date"
-              value={sessionDate}
-              onChange={(e) => setSessionDate(e.target.value)}
-              className="input-coach"
-            />
+            <DateField id="attendance-date" value={sessionDate} onChange={setSessionDate} required />
           </div>
           <div>
             <label className="label" htmlFor="attendance-time">

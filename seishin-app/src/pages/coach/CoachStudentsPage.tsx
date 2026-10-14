@@ -3,15 +3,18 @@ import type { FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { coachApi } from '../../api/coach'
 import type { Competition, GroupSummary, StudentSummary } from '../../api/types'
-import { BADGES_KEY, badgesOf, plural, type IssuedBadge } from '../../components/coach/home/helpers'
+import { badgesOf, plural } from '../../components/coach/home/helpers'
 import { studentProgress, type NextBeltProgress } from '../../utils/nextBeltProgress'
 import { ApiError } from '../../api/client'
 import { useCoachCreate } from '../../components/coach/coachCreateContext'
 import { CoachError, CoachLoading } from '../../components/coach/CoachScreenState'
 import { BeltStrip } from '../../components/coach/BeltStrip'
 import { StudentSheet } from '../../components/coach/StudentSheet'
+import { DateField } from '../../components/ui/DateField'
 import { IconChevronRight, IconPlus, IconSearch, IconX } from '../../components/ui/Icons'
+import { useCoachIssuedBadges } from '../../hooks/useCoachIssuedBadges'
 import { useStoredState } from '../../hooks/useStoredState'
+import { syncAssignBelt } from '../../utils/coachSync'
 import { todayIsoDate, useStudentBelts, type BeltInfo } from '../../hooks/useStudentBelts'
 import { rankLabel, stepName, styleLabel, type BeltSystem } from '../../utils/beltSystem'
 import { applyGroupEdits, EMPTY_GROUP_EDITS, GROUP_EDITS_KEY, type GroupEdits } from '../../utils/groupEdits'
@@ -114,7 +117,7 @@ export function CoachStudentsPage() {
   const [rawMembers, setRawMembers] = useState<Record<number, StudentSummary[]>>({})
   const [allStudents, setAllStudents] = useState<StudentSummary[]>([])
   const [edits, setEdits] = useStoredState<GroupEdits>(GROUP_EDITS_KEY, EMPTY_GROUP_EDITS)
-  const [issuedLog] = useStoredState<IssuedBadge[]>(BADGES_KEY, [])
+  const { issued: issuedLog } = useCoachIssuedBadges()
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const { groups, rows, ungrouped, members } = useMemo(() => {
     const applied = applyGroupEdits(rawGroups, rawMembers, edits, allStudents)
@@ -125,16 +128,17 @@ export function CoachStudentsPage() {
         .map((student) => ({ ...student, groupId: group.id, groupName: group.name })),
     )
     const inGroups = new Set(list.map((row) => row.id))
-    const own = new Map(Object.values(rawMembers).flat().map((s) => [s.id, s]))
-    const rest: StudentRow[] = [...own.values()]
-      .filter((s) => !inGroups.has(s.id))
-      .sort((a, b) => a.lastName.localeCompare(b.lastName, 'ru'))
+    const pool = new Map<number, StudentSummary>()
+    for (const student of [...allStudents, ...Object.values(rawMembers).flat()]) pool.set(student.id, student)
+    const rest: StudentRow[] = [...pool.values()]
+      .filter((s) => !inGroups.has(s.id) && !s.guest)
+      .sort((a, b) => a.lastName.localeCompare(b.lastName, 'ru') || a.firstName.localeCompare(b.firstName, 'ru'))
       .map((s) => ({ ...s, groupId: 0, groupName: 'Без группы' }))
     return { groups: ordered, rows: list, ungrouped: rest, members: applied.members }
   }, [rawGroups, rawMembers, edits, allStudents])
   const { systems: beltSystems, info: beltInfo, assign: assignBelt } = useStudentBelts()
   const [openStudent, setOpenStudent] = useState<{ row: StudentRow; key: number; open: boolean } | null>(null)
-  const [filterGroupId, setFilterGroupId] = useState<number | 'all'>('all')
+  const [filterGroupId, setFilterGroupId] = useState<number | 'all' | 'none'>('all')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -199,9 +203,10 @@ export function CoachStudentsPage() {
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     const seen = new Set<number>()
-    return [...rows, ...(filterGroupId === 'all' ? ungrouped : [])].filter((row) => {
-      if (filterGroupId !== 'all' && row.groupId !== filterGroupId) return false
-      if (filterGroupId === 'all') {
+    const source = filterGroupId === 'none' ? ungrouped : filterGroupId === 'all' ? [...rows, ...ungrouped] : rows
+    return source.filter((row) => {
+      if (typeof filterGroupId === 'number' && row.groupId !== filterGroupId) return false
+      if (filterGroupId === 'all' || filterGroupId === 'none') {
         if (seen.has(row.id)) return false
         seen.add(row.id)
       }
@@ -222,7 +227,7 @@ export function CoachStudentsPage() {
   }, [visible])
 
   const withoutBelt = useMemo(() => {
-    const scope = filterGroupId === 'all' ? [...rows, ...ungrouped] : visible
+    const scope = filterGroupId === 'all' || filterGroupId === 'none' ? [...rows, ...ungrouped] : visible
     const bySystem = new Map<string, { system: BeltSystem; students: Map<number, StudentRow> }>()
     for (const row of scope) {
       const belt = beltInfo(row, row.groupId || null)
@@ -237,13 +242,40 @@ export function CoachStudentsPage() {
 
   const studentGroups = (id: number) => rows.filter((row) => row.id === id).map((row) => ({ id: row.groupId, name: row.groupName }))
 
-  const moveStudent = (studentId: number, toId: number, fromId: number | null) => {
-    const next: Record<number, number[]> = {}
-    if (fromId != null) next[fromId] = members[fromId].filter((s) => s.id !== studentId).map((s) => s.id)
-    next[toId] = [...members[toId].map((s) => s.id).filter((id) => id !== studentId), studentId]
-    setEdits((e) => ({ ...e, members: { ...e.members, ...next } }))
-    const target = groups.find((g) => g.id === toId)
-    setOpenStudent((s) => (s ? { ...s, row: { ...s.row, groupId: toId, groupName: target?.name ?? s.row.groupName } } : s))
+  const moveStudent = async (studentId: number, toId: number, fromId: number | null) => {
+    try {
+      if (fromId != null) await coachApi.removeStudentFromGroup(fromId, studentId)
+      await coachApi.addStudentToGroup(toId, studentId)
+      const next: Record<number, number[]> = {}
+      if (fromId != null) next[fromId] = members[fromId].filter((s) => s.id !== studentId).map((s) => s.id)
+      next[toId] = [...members[toId].map((s) => s.id).filter((id) => id !== studentId), studentId]
+      setEdits((e) => ({ ...e, members: { ...e.members, ...next } }))
+      const target = groups.find((g) => g.id === toId)
+      setOpenStudent((s) => (s ? { ...s, row: { ...s.row, groupId: toId, groupName: target?.name ?? s.row.groupName } } : s))
+      await load()
+    } catch (err) {
+      setMessage(err instanceof ApiError ? err.message : 'Не удалось перевести ученика')
+      throw err
+    }
+  }
+
+  const removeStudentFromClub = async (studentId: number) => {
+    try {
+      await coachApi.removeStudent(studentId)
+      setEdits((current) => ({
+        ...current,
+        members: Object.fromEntries(
+          Object.entries(current.members).map(([id, ids]) => [id, ids.filter((item) => item !== studentId)]),
+        ),
+      }))
+      setOpenStudent(null)
+      setMessage('Ученик удалён из клуба')
+      await load()
+    } catch (err) {
+      const text = err instanceof ApiError ? err.message : 'Не удалось удалить ученика'
+      setMessage(text)
+      throw err
+    }
   }
 
   const cardProps = (student: StudentRow) => {
@@ -256,6 +288,7 @@ export function CoachStudentsPage() {
   }
 
   const groupCount = useMemo(() => {
+    if (filterGroupId === 'none') return ungrouped.length
     if (filterGroupId === 'all') return new Set(rows.map((row) => row.id)).size + ungrouped.length
     return rows.filter((row) => row.groupId === filterGroupId).length
   }, [rows, ungrouped, filterGroupId])
@@ -278,6 +311,10 @@ export function CoachStudentsPage() {
   const createStudent = async (e: FormEvent) => {
     e.preventDefault()
     if (studentGroupId == null) return
+    if (!studentForm.birthDate) {
+      setMessage('Укажите дату рождения')
+      return
+    }
     try {
       await coachApi.createStudent({ ...studentForm, groupId: studentGroupId, guest: false })
       setMessage('Ученик добавлен')
@@ -335,6 +372,15 @@ export function CoachStudentsPage() {
           className={chipClass(filterGroupId === 'all')}
         >
           Все группы
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filterGroupId === 'none'}
+          onClick={() => setFilterGroupId('none')}
+          className={chipClass(filterGroupId === 'none')}
+        >
+          Без группы{ungrouped.length > 0 ? ` · ${ungrouped.length}` : ''}
         </button>
         {groups.map((group) => (
           <button
@@ -414,14 +460,12 @@ export function CoachStudentsPage() {
             className="input-coach"
             required
           />
-          <input
-            type="date"
+          <DateField
+            id="new-student-birth"
             value={studentForm.birthDate}
-            onChange={(e) => setStudentForm({ ...studentForm, birthDate: e.target.value })}
-            className="input-coach"
-            aria-label="Дата рождения"
+            onChange={(birthDate) => setStudentForm({ ...studentForm, birthDate })}
             max={todayIsoDate()}
-            required
+            placeholder="Дата рождения"
           />
           <div className="flex gap-2">
             <button type="submit" className="btn-coach">Добавить</button>
@@ -469,7 +513,11 @@ export function CoachStudentsPage() {
                 <button
                   key={system.id}
                   type="button"
-                  onClick={() => assignBelt([...students.values()], system.id, first.id)}
+                  onClick={() => {
+                    const list = [...students.values()]
+                    assignBelt(list, system.id, first.id)
+                    void Promise.all(list.map((s) => syncAssignBelt(s.id, first).catch(() => undefined)))
+                  }}
                   className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-white px-3.5 text-sm font-semibold text-text shadow-[var(--shadow-card)] transition active:scale-95"
                 >
                   <BeltStrip color={first.color} stripe={first.stripe} size="sm" />
@@ -492,7 +540,13 @@ export function CoachStudentsPage() {
       ) : visible.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-border bg-white px-4 py-10 text-center">
           <p className="text-sm font-medium text-text">
-            {query ? 'Никого не нашли' : groups.length === 0 ? 'Создайте первую группу' : 'В группе пока нет учеников'}
+            {query
+              ? 'Никого не нашли'
+              : filterGroupId === 'none'
+                ? 'Учеников без группы нет'
+                : groups.length === 0
+                  ? 'Создайте первую группу'
+                  : 'В группе пока нет учеников'}
           </p>
           {!query && (
             <button
@@ -562,6 +616,7 @@ export function CoachStudentsPage() {
           initialGroupId={openStudent.row.groupId || null}
           allGroups={groups.map((g) => ({ id: g.id, name: g.name }))}
           onMove={(toId, fromId) => moveStudent(openStudent.row.id, toId, fromId)}
+          onRemoveFromClub={() => removeStudentFromClub(openStudent.row.id)}
           onClose={() => setOpenStudent((s) => (s ? { ...s, open: false } : s))}
         />
       )}

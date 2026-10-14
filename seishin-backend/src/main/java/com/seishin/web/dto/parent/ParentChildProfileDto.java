@@ -26,4 +26,7 @@ public class ParentChildProfileDto {
     private boolean maxRank;
     private String coachRecommendation;
     private String clubName;
+    private String clubDescription;
+    private String clubAddress;
+    private String clubLogo;
 }

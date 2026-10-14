@@ -42,10 +42,12 @@ public class CoachService {
     private final PaymentRepository paymentRepository;
     private final CompetitionRegistrationRepository registrationRepository;
     private final CoachAccessService coachAccessService;
+    private final CoachNotificationService coachNotificationService;
     private final StudentMapper studentMapper;
     private final ProgressService progressService;
     private final ScheduleService scheduleService;
     private final StudentTrainingIntentRepository trainingIntentRepository;
+    private final ClubDefaultsService clubDefaultsService;
 
     @Value("${seishin.invite.ttl-hours:24}")
     private int inviteTtlHours;
@@ -55,7 +57,7 @@ public class CoachService {
     @Transactional
     public CoachDashboardDto getDashboard(UserPrincipal coach) {
         Long clubId = coach.getClubId();
-        List<Student> students = studentRepository.findByClubId(clubId);
+        List<Student> students = activeStudents(clubId);
         List<TrainingGroup> groups = groupRepository.findAccessibleByCoach(coach.getId());
         LocalDate today = LocalDate.now();
         LocalDate weekLater = today.plusDays(7);
@@ -80,20 +82,36 @@ public class CoachService {
                 .pendingPayments(pendingPayments)
                 .pendingCompetitionRsvps(pendingRsvps)
                 .birthdayStudents(birthdays.stream().map(studentMapper::toSummary).toList())
-                .groups(groups.stream().map(g -> GroupSummaryDto.builder()
+                .groups(groups.stream().filter(g -> !g.isHidden()).map(g -> GroupSummaryDto.builder()
                         .id(g.getId())
                         .name(g.getName())
-                        .studentCount(groupStudentRepository.findByGroupId(g.getId()).size())
+                        .studentCount(activeInGroup(g.getId()))
                         .assistantAccess(coachAccessService.isAssistant(coach, g))
+                        .hidden(g.isHidden())
                         .build()).toList())
                 .nextClass(scheduleService.findNextClass(coach))
                 .build();
     }
 
     public List<StudentSummaryDto> listStudents(UserPrincipal coach) {
-        return studentRepository.findByClubId(coach.getClubId()).stream()
+        return activeStudents(coach.getClubId()).stream()
                 .map(studentMapper::toSummary)
                 .toList();
+    }
+
+    @Transactional
+    public void removeStudent(UserPrincipal coach, Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new NotFoundException("Ученик не найден"));
+        if (coach.getClubId() == null || !student.getClub().getId().equals(coach.getClubId())) {
+            throw new BadRequestException("Ученик другого клуба");
+        }
+        if (student.getLeftAt() != null) {
+            return;
+        }
+        groupStudentRepository.deleteByStudentId(studentId);
+        student.setLeftAt(Instant.now());
+        studentRepository.save(student);
     }
 
     @Transactional
@@ -116,9 +134,46 @@ public class CoachService {
         progressService.recalculateProgress(student.getId());
         if (dto.getGroupId() != null) {
             TrainingGroup group = coachAccessService.requireGroupAccess(coach, dto.getGroupId());
-            groupStudentRepository.save(GroupStudent.builder().group(group).student(student).build());
+            addStudentToGroupInternal(coach, student, group);
         }
         return studentMapper.toSummary(student);
+    }
+
+    @Transactional
+    public void addStudentToGroup(UserPrincipal coach, Long groupId, Long studentId) {
+        TrainingGroup group = coachAccessService.requireGroupAccess(coach, groupId);
+        Student student = requireActiveClubStudent(coach, studentId);
+        addStudentToGroupInternal(coach, student, group);
+    }
+
+    @Transactional
+    public void removeStudentFromGroup(UserPrincipal coach, Long groupId, Long studentId) {
+        coachAccessService.requireGroupAccess(coach, groupId);
+        requireActiveClubStudent(coach, studentId);
+        groupStudentRepository.deleteByGroupIdAndStudentId(groupId, studentId);
+    }
+
+    private void addStudentToGroupInternal(UserPrincipal coach, Student student, TrainingGroup group) {
+        if (!student.getClub().getId().equals(group.getClub().getId())) {
+            throw new BadRequestException("Ученик другого клуба");
+        }
+        if (groupStudentRepository.existsByGroupIdAndStudentId(group.getId(), student.getId())) {
+            return;
+        }
+        groupStudentRepository.save(GroupStudent.builder().group(group).student(student).build());
+        coachNotificationService.notifyStudentJoinedGroup(student, group, coach.getId());
+    }
+
+    private Student requireActiveClubStudent(UserPrincipal coach, Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new NotFoundException("Ученик не найден"));
+        if (coach.getClubId() == null || !student.getClub().getId().equals(coach.getClubId())) {
+            throw new BadRequestException("Ученик другого клуба");
+        }
+        if (student.getLeftAt() != null) {
+            throw new BadRequestException("Ученик удалён из клуба");
+        }
+        return student;
     }
 
     public List<GroupSummaryDto> listGroups(UserPrincipal coach) {
@@ -126,20 +181,51 @@ public class CoachService {
                 .map(g -> GroupSummaryDto.builder()
                         .id(g.getId())
                         .name(g.getName())
-                        .studentCount(groupStudentRepository.findByGroupId(g.getId()).size())
+                        .studentCount(activeInGroup(g.getId()))
                         .assistantAccess(coachAccessService.isAssistant(coach, g))
+                        .hidden(g.isHidden())
                         .build())
                 .toList();
+    }
+
+    @Transactional
+    public GroupSummaryDto updateGroup(UserPrincipal coach, Long groupId, UpdateGroupDto dto) {
+        TrainingGroup group = coachAccessService.requireGroupAccess(coach, groupId);
+        if (dto.getHidden() != null) {
+            group.setHidden(dto.getHidden());
+            groupRepository.save(group);
+        }
+        return GroupSummaryDto.builder()
+                .id(group.getId())
+                .name(group.getName())
+                .studentCount(activeInGroup(group.getId()))
+                .assistantAccess(coachAccessService.isAssistant(coach, group))
+                .hidden(group.isHidden())
+                .build();
+    }
+
+    @Transactional
+    public StudentSummaryDto updateStudent(UserPrincipal coach, Long studentId, UpdateStudentDto dto) {
+        Student student = requireActiveClubStudent(coach, studentId);
+        if (dto.getCoachRecommendation() != null) {
+            student.setCoachRecommendation(dto.getCoachRecommendation().isBlank() ? null : dto.getCoachRecommendation().trim());
+            studentRepository.save(student);
+        }
+        return studentMapper.toSummary(student);
     }
 
     public List<StudentSummaryDto> listGroupStudents(UserPrincipal coach, Long groupId) {
         coachAccessService.requireGroupAccess(coach, groupId);
         return groupStudentRepository.findByGroupId(groupId).stream()
-                .map(gs -> studentMapper.toSummary(gs.getStudent()))
+                .map(GroupStudent::getStudent)
+                .filter(student -> student.getLeftAt() == null)
+                .map(studentMapper::toSummary)
                 .toList();
     }
 
     public List<BadgeDefinitionDto> listBadges(UserPrincipal coach) {
+        Club club = clubRepository.findById(coach.getClubId()).orElseThrow(() -> new BadRequestException("Клуб не найден"));
+        clubDefaultsService.ensurePresetBadges(club);
         return badgeDefinitionRepository.findByClubId(coach.getClubId()).stream()
                 .map(b -> BadgeDefinitionDto.builder()
                         .id(b.getId())
@@ -158,17 +244,50 @@ public class CoachService {
         if (!student.getClub().getId().equals(coach.getClubId())) {
             throw new BadRequestException("Ученик другого клуба");
         }
-        BeltLevel belt = beltLevelRepository.findById(dto.getBeltLevelId())
-                .orElseThrow(() -> new NotFoundException("Пояс не найден"));
-        if (!belt.getClub().getId().equals(coach.getClubId())) {
-            throw new BadRequestException("Пояс другого клуба");
-        }
+        BeltLevel belt = resolveBeltLevel(coach, dto);
         student.setBeltLevel(belt);
         student.setBeltAssignedAt(Instant.now());
         student.setProgressPercent(0);
         student = studentRepository.save(student);
         progressService.recalculateProgress(student.getId());
         return studentMapper.toSummary(studentRepository.findById(student.getId()).orElseThrow());
+    }
+
+    private BeltLevel resolveBeltLevel(UserPrincipal coach, AssignBeltDto dto) {
+        if (dto.getBeltLevelId() != null) {
+            BeltLevel belt = beltLevelRepository.findById(dto.getBeltLevelId())
+                    .orElseThrow(() -> new NotFoundException("Пояс не найден"));
+            if (!belt.getClub().getId().equals(coach.getClubId())) {
+                throw new BadRequestException("Пояс другого клуба");
+            }
+            return belt;
+        }
+        String name = dto.getName() == null ? "" : dto.getName().trim();
+        String color = dto.getColor() == null ? "" : dto.getColor().trim();
+        if (name.isEmpty() || color.isEmpty() || dto.getSortOrder() == null) {
+            throw new BadRequestException("Укажите beltLevelId или name, color и sortOrder");
+        }
+        return beltLevelRepository.findByClubIdAndName(coach.getClubId(), name)
+                .orElseGet(() -> beltLevelRepository.save(BeltLevel.builder()
+                        .club(clubRepository.getReferenceById(coach.getClubId()))
+                        .name(name)
+                        .color(color)
+                        .sortOrder(dto.getSortOrder())
+                        .sessionsRequired(24)
+                        .build()));
+    }
+
+    public List<IssuedBadgeDto> listIssuedBadges(UserPrincipal coach) {
+        return studentBadgeRepository.findByStudentClubIdOrderByIssuedAtDesc(coach.getClubId()).stream()
+                .map(sb -> IssuedBadgeDto.builder()
+                        .id(sb.getId())
+                        .studentId(sb.getStudent().getId())
+                        .badgeId(sb.getBadge().getId())
+                        .badgeName(sb.getBadge().getName())
+                        .issuedAt(sb.getIssuedAt())
+                        .note(sb.getNote())
+                        .build())
+                .toList();
     }
 
     @Transactional
@@ -193,7 +312,8 @@ public class CoachService {
         TrainingGroup group = coachAccessService.requireGroupAccess(coach, groupId);
         var sessionOpt = sessionRepository.findByGroupIdAndSessionDateAndStartTime(groupId, sessionDate, startTime);
         var students = groupStudentRepository.findByGroupId(groupId).stream()
-                .map(gs -> gs.getStudent())
+                .map(GroupStudent::getStudent)
+                .filter(student -> student.getLeftAt() == null)
                 .toList();
         var recordsByStudent = sessionOpt
                 .map(session -> attendanceRepository.findBySessionId(session.getId()).stream()
@@ -255,9 +375,37 @@ public class CoachService {
                             .student(student)
                             .build());
             record.setStatus(entry.getStatus());
+            if (entry.getStatus() == AttendanceStatus.ABSENT) {
+                record.setAbsenceReason(trimReason(entry.getAbsenceReason()));
+            } else {
+                record.setAbsenceReason(null);
+            }
             attendanceRepository.save(record);
             progressService.recalculateProgress(student.getId());
         }
+    }
+
+    private List<Student> activeStudents(Long clubId) {
+        if (clubId == null) {
+            return List.of();
+        }
+        return studentRepository.findByClubId(clubId).stream()
+                .filter(student -> student.getLeftAt() == null)
+                .toList();
+    }
+
+    private int activeInGroup(Long groupId) {
+        return (int) groupStudentRepository.findByGroupId(groupId).stream()
+                .filter(link -> link.getStudent().getLeftAt() == null)
+                .count();
+    }
+
+    private static String trimReason(String reason) {
+        if (reason == null) {
+            return null;
+        }
+        String t = reason.trim();
+        return t.isEmpty() ? null : t.substring(0, Math.min(32, t.length()));
     }
 
     private static boolean isUpcomingSession(LocalDate sessionDate, LocalTime startTime) {

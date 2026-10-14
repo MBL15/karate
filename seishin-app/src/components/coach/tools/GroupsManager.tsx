@@ -70,26 +70,83 @@ export function GroupsManager() {
   const setMembers = (next: Record<number, number[]>) =>
     setEdits((e) => ({ ...e, members: { ...e.members, ...next } }))
 
-  const removeFrom = (groupId: number, studentId: number) =>
-    setMembers({ [groupId]: members[groupId].filter((s) => s.id !== studentId).map((s) => s.id) })
+  const reloadGroups = async () => {
+    const list = await coachApi.groups()
+    const entries = await Promise.all(list.map(async (g) => [g.id, await coachApi.groupStudents(g.id)] as const))
+    setRawGroups(list)
+    setRawMembers(Object.fromEntries(entries))
+  }
+
+  const removeFrom = (groupId: number, student: StudentSummary) => {
+    const ok = window.confirm(
+      `Убрать ${student.firstName} ${student.lastName} из группы «${groups.find((g) => g.id === groupId)?.name ?? ''}»? Ученик останется в клубе в разделе «Без группы». Чтобы удалить из клуба полностью — «Из клуба» или карточка в «Базе».`,
+    )
+    if (!ok) return
+    setError(null)
+    void (async () => {
+      try {
+        await coachApi.removeStudentFromGroup(groupId, student.id)
+        setMembers({ [groupId]: members[groupId].filter((s) => s.id !== student.id).map((s) => s.id) })
+        await reloadGroups()
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Не удалось убрать из группы')
+      }
+    })()
+  }
+
+  const removeFromClub = async (student: StudentSummary) => {
+    const ok = window.confirm(
+      `Удалить ${student.firstName} ${student.lastName} из клуба? Ученик пропадёт из базы и статистики. Если он запишется в другой клуб по новому коду, это произойдёт само.`,
+    )
+    if (!ok) return
+    setError(null)
+    try {
+      await coachApi.removeStudent(student.id)
+      setAllStudents((list) => list.filter((item) => item.id !== student.id))
+      setRawMembers((map) =>
+        Object.fromEntries(Object.entries(map).map(([id, students]) => [id, students.filter((item) => item.id !== student.id)])),
+      )
+      setEdits((current) => ({
+        ...current,
+        members: Object.fromEntries(
+          Object.entries(current.members).map(([id, ids]) => [id, ids.filter((item) => item !== student.id)]),
+        ),
+      }))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось удалить ученика')
+    }
+  }
 
   const addTo = (groupId: number, studentId: number) => {
-    const next: Record<number, number[]> = {}
-    for (const g of groups) {
-      if (g.id !== groupId && members[g.id].some((s) => s.id === studentId)) {
-        next[g.id] = members[g.id].filter((s) => s.id !== studentId).map((s) => s.id)
+    setError(null)
+    void (async () => {
+      try {
+        const from = groupOf.get(studentId)
+        if (from && from.id !== groupId) {
+          await coachApi.removeStudentFromGroup(from.id, studentId)
+        }
+        await coachApi.addStudentToGroup(groupId, studentId)
+        const next: Record<number, number[]> = {}
+        for (const g of groups) {
+          if (g.id !== groupId && members[g.id].some((s) => s.id === studentId)) {
+            next[g.id] = members[g.id].filter((s) => s.id !== studentId).map((s) => s.id)
+          }
+        }
+        next[groupId] = [...members[groupId].map((s) => s.id).filter((id) => id !== studentId), studentId]
+        setMembers(next)
+        await reloadGroups()
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Не удалось добавить в группу')
       }
-    }
-    next[groupId] = [...members[groupId].map((s) => s.id), studentId]
-    setMembers(next)
+    })()
   }
 
   const deleteGroup = (groupId: number) => {
-    setEdits((e) => {
-      const rest = { ...e.members }
-      delete rest[groupId]
-      return { hidden: [...e.hidden, groupId], members: rest }
-    })
+    setError(null)
+    void coachApi
+      .updateGroup(groupId, true)
+      .then(() => reloadGroups())
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Не удалось скрыть группу'))
     setConfirmDelete(null)
     setEditing(null)
     setOpenGroup(null)
@@ -120,8 +177,9 @@ export function GroupsManager() {
     const q = query.trim().toLowerCase()
     return [...pool.values()]
       .filter((s) => !members[groupId].some((m) => m.id === s.id))
+      .filter((s) => !groupOf.has(s.id))
       .filter((s) => !q || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q))
-      .sort((a, b) => Number(groupOf.has(a.id)) - Number(groupOf.has(b.id)) || a.lastName.localeCompare(b.lastName, 'ru'))
+      .sort((a, b) => a.lastName.localeCompare(b.lastName, 'ru'))
   }
 
   return (
@@ -223,14 +281,23 @@ export function GroupsManager() {
                             </span>
                             <span className="text-xs text-text-secondary">{s.age} л.</span>
                             {isEditing && (
-                              <button
-                                type="button"
-                                onClick={() => removeFrom(group.id, s.id)}
-                                aria-label={`Убрать ${s.firstName} ${s.lastName} из группы`}
-                                className="pop-in flex size-8 items-center justify-center rounded-full bg-error-bg text-error transition active:scale-90"
-                              >
-                                <IconX size={14} />
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => void removeFromClub(s)}
+                                  className="pop-in text-xs font-semibold text-error"
+                                >
+                                  Из клуба
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFrom(group.id, s)}
+                                  aria-label={`Убрать ${s.firstName} ${s.lastName} из группы (останется в клубе)`}
+                                  className="pop-in flex size-8 items-center justify-center rounded-full bg-error-bg text-error transition active:scale-90"
+                                >
+                                  <IconX size={14} />
+                                </button>
+                              </>
                             )}
                           </li>
                         ))}
@@ -250,9 +317,7 @@ export function GroupsManager() {
                           />
                         </span>
                         <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-                          {candidates(group.id).map((s) => {
-                            const from = groupOf.get(s.id)
-                            return (
+                          {candidates(group.id).map((s) => (
                               <li key={s.id}>
                                 <button
                                   type="button"
@@ -264,17 +329,22 @@ export function GroupsManager() {
                                     <span className="block truncate text-text">
                                       {s.firstName} {s.lastName}
                                     </span>
-                                    <span className="block text-xs text-text-secondary">{from ? `Сейчас в «${from.name}»` : 'Без группы'}</span>
+                                    <span className="block text-xs text-text-secondary">Без группы</span>
                                   </span>
                                   <span className="flex size-8 items-center justify-center rounded-full bg-brand-blue text-white">
                                     <IconPlus size={14} />
                                   </span>
                                 </button>
                               </li>
-                            )
-                          })}
+                            ))}
                           {candidates(group.id).length === 0 && (
-                            <li className="px-2 py-2 text-sm text-text-secondary">{query ? 'Никого не нашли' : 'Все ученики уже в этой группе'}</li>
+                            <li className="px-2 py-2 text-sm text-text-secondary">
+                              {query
+                                ? 'Никого не нашли'
+                                : [...pool.values()].some((s) => groupOf.has(s.id))
+                                  ? 'Свободных учеников нет — перевод в «Базе», карточка ученика.'
+                                  : 'Все ученики уже в этой группе'}
+                            </li>
                           )}
                         </ul>
                       </div>

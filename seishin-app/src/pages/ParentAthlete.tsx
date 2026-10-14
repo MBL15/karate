@@ -20,9 +20,6 @@ import { formatDate } from '../utils/format'
 
 type Tab = 'progress' | 'stats' | 'achievements'
 
-/** Сервер пока не отдаёт итоги соревнований родителю — см. PROJECT_KNOWLEDGE §9. */
-const NO_RESULTS: ChildCompetitionResult[] = []
-
 const TABS: { id: Tab; label: string }[] = [
   { id: 'progress', label: 'Развитие' },
   { id: 'stats', label: 'Посещения' },
@@ -70,18 +67,35 @@ export function ParentAthlete() {
   const { selectedChildId } = useParentChild()
   const { home, history, achievements, loading, error, reload } = useParentChildData(selectedChildId)
   const [recommendation, setRecommendation] = useState<string | null>(null)
+  const [competitionResults, setCompetitionResults] = useState<ChildCompetitionResult[]>([])
   const [alertsOpen, setAlertsOpen] = useState(false)
   const wanted = params.get('tab')
   const tab: Tab = TABS.some((t) => t.id === wanted) ? (wanted as Tab) : 'progress'
 
   useEffect(() => {
     setRecommendation(null)
+    setCompetitionResults([])
     if (!selectedChildId) return
     let cancelled = false
     parentApi
       .profile(selectedChildId)
       .then((p) => !cancelled && setRecommendation(p.coachRecommendation))
       .catch(() => !cancelled && setRecommendation(null))
+    parentApi
+      .competitionResults(selectedChildId)
+      .then((list) =>
+        !cancelled &&
+        setCompetitionResults(
+          list.map((r) => ({
+            competitionId: r.competitionId,
+            competitionName: r.competitionName,
+            eventDate: r.eventDate,
+            place: r.place as ChildCompetitionResult['place'],
+            category: r.category ?? '',
+          })),
+        ),
+      )
+      .catch(() => !cancelled && setCompetitionResults([]))
     return () => {
       cancelled = true
     }
@@ -144,11 +158,11 @@ export function ParentAthlete() {
         ) : error || !home ? (
           <ParentError message={error ?? 'Нет данных'} onRetry={reload} />
         ) : tab === 'progress' ? (
-          <ChildDevelopment home={home} history={history} achievements={achievements} results={NO_RESULTS} recommendation={recommendation} />
+          <ChildDevelopment home={home} history={history} achievements={achievements} results={competitionResults} recommendation={recommendation} />
         ) : tab === 'stats' ? (
           <AttendanceStats key={selectedChildId} history={history} />
         ) : (
-          <AchievementsTab achievements={achievements} results={NO_RESULTS} />
+          <AchievementsTab achievements={achievements} results={competitionResults} />
         )}
       </div>
 

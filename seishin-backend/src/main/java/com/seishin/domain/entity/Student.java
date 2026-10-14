@@ -48,4 +48,7 @@ public class Student {
 
     @Column(length = 500)
     private String coachRecommendation;
+
+    /** Ученик ушёл из клуба: не показывается в базе и не попадает в статистику. */
+    private Instant leftAt;
 }

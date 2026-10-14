@@ -17,4 +17,6 @@ public class RegistrationDto {
     private RsvpStatus rsvpStatus;
     private String autoCategory;
     private String effectiveCategory;
+    private Integer resultPlace;
+    private String resultCategory;
 }

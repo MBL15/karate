@@ -1,6 +1,8 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { LogoutButton } from '../../auth/LogoutButton'
 import { IconCheck } from '../../ui/Icons'
+import { CoachNotificationBell } from '../CoachNotificationBell'
 import { initials } from './helpers'
 
 function greeting(date: Date) {
@@ -73,11 +75,19 @@ export function CoachHeroCard({
             <div role="menu" className="pop-in absolute top-full left-0 z-20 mt-2 w-56 rounded-2xl border border-border-light bg-white p-2 text-text shadow-[var(--shadow-elevated)]">
               <p className="truncate px-2 pt-1 text-sm font-semibold">{name}</p>
               {clubName && <p className="truncate px-2 text-xs text-text-secondary">{clubName}</p>}
+              <Link
+                to="/coach/tools/club"
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="mt-2 flex min-h-10 w-full items-center rounded-xl px-2 text-left text-sm font-medium hover:bg-surface-muted"
+              >
+                Настройки профиля
+              </Link>
               <button
                 type="button"
                 role="menuitem"
                 onClick={pickPhoto}
-                className="mt-2 flex min-h-10 w-full items-center rounded-xl px-2 text-left text-sm font-medium hover:bg-surface-muted"
+                className="flex min-h-10 w-full items-center rounded-xl px-2 text-left text-sm font-medium hover:bg-surface-muted"
               >
                 {photo ? 'Сменить фото' : 'Загрузить фото'}
               </button>
@@ -102,7 +112,7 @@ export function CoachHeroCard({
 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-white/75">{greeting(now)},</p>
-          <h1 className="truncate font-display text-[1.375rem] leading-tight font-bold tracking-tight">{name}</h1>
+          <h1 className="truncate font-display text-[1.375rem] leading-tight font-bold tracking-tight">{name.trim().split(/\s+/)[0] || name}</h1>
           {clubName && (
             <p className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium">
               <span className="size-1.5 shrink-0 rounded-full bg-[#4ade80]" aria-hidden />
@@ -110,6 +120,8 @@ export function CoachHeroCard({
             </p>
           )}
         </div>
+
+        <CoachNotificationBell className="text-white hover:bg-white/10" />
 
         <button
           type="button"

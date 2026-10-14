@@ -46,4 +46,10 @@ public class CompetitionRegistration {
     private String coachOverrideCategory;
 
     private Instant parentRespondedAt;
+
+    /** 0 — участие, 1–3 — призовое место; null — итог не внесён. */
+    private Integer resultPlace;
+
+    @Column(length = 100)
+    private String resultCategory;
 }

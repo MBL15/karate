@@ -27,8 +27,11 @@ public class BeltService {
     private final ClubRepository clubRepository;
     private final StudentRepository studentRepository;
     private final BeltProgressService beltProgressService;
+    private final ClubDefaultsService clubDefaultsService;
 
     public List<BeltLevelDto> listBeltLadder(UserPrincipal coach) {
+        Club club = requireClub(coach);
+        clubDefaultsService.ensureStarterBelts(club);
         return beltLevelRepository.findByClubIdOrderBySortOrderAsc(coach.getClubId()).stream()
                 .map(this::toDto)
                 .toList();

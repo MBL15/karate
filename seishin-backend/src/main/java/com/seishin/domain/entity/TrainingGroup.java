@@ -26,4 +26,9 @@ public class TrainingGroup {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "coach_id", nullable = false)
     private User coach;
+
+    /** Скрыта из расписания и списков, состав на сервере сохраняется. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean hidden = false;
 }

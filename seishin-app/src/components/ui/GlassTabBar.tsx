@@ -27,13 +27,12 @@ export function GlassTabBar({
       style={{ '--glass-tone': color } as CSSProperties}
       onPointerLeave={() => setPressed(null)}
     >
-      <span className="glass-sheen pointer-events-none absolute inset-0 rounded-[2rem]" aria-hidden />
       <span
         className="glass-indicator pointer-events-none absolute top-1.5 bottom-1.5"
         style={{ left: `calc(0.375rem + ${target} * (100% - 0.75rem) / ${count})`, width: `calc((100% - 0.75rem) / ${count})` }}
         aria-hidden
       >
-        <span key={target} className="glass-blob block size-full rounded-[1.5rem]" />
+        <span className="glass-blob block size-full rounded-[1.5rem]" />
       </span>
       <ul aria-label={label} className="relative grid h-[3.75rem]" style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}>
         {items.map((item, index) => (

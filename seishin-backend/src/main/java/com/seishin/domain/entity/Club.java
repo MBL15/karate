@@ -38,4 +38,18 @@ public class Club {
     @Column(nullable = false)
     @Builder.Default
     private boolean beltAutoPromote = false;
+
+    @Column(length = 2000)
+    private String description;
+
+    @Column(length = 500)
+    private String address;
+
+    /** Data URL или URL логотипа. */
+    @Column(columnDefinition = "TEXT")
+    private String logo;
+
+    /** JSON: системы поясов и присвоения (кабинет тренера). */
+    @Column(columnDefinition = "TEXT")
+    private String beltStateJson;
 }

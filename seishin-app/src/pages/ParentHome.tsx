@@ -57,6 +57,8 @@ function NextTrainingRow({
   }
 
   const status = training.intentStatus
+  const topicTitle = training.topicTitle?.trim()
+  const topicText = training.topicText?.trim()
   return (
     <div>
       <p className="font-semibold text-text">
@@ -72,11 +74,12 @@ function NextTrainingRow({
           <IconClipboard size={17} />
         </span>
         <span className="min-w-0">
-          <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-            Тема занятия
-            <span className="rounded-full bg-white px-1.5 py-px text-[9px] font-bold">СКОРО</span>
-          </span>
-          <span className="block text-sm text-text-secondary">Здесь появятся тема и план, которые пишет тренер</span>
+          <span className="block text-[11px] font-semibold uppercase tracking-wider text-text-muted">Тема занятия</span>
+          <span className="block text-sm font-semibold text-text">{topicTitle || 'Тренер ещё не указал тему'}</span>
+          {topicText && <span className="mt-0.5 block text-sm text-text-secondary">{topicText}</span>}
+          {!topicTitle && !topicText && (
+            <span className="mt-0.5 block text-sm text-text-secondary">Появится, когда тренер заполнит план в окне тренировки</span>
+          )}
         </span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">

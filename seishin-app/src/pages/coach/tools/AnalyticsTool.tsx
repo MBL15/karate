@@ -4,7 +4,8 @@ import { coachApi } from '../../../api/coach'
 import { ApiError } from '../../../api/client'
 import type { CoachDashboard, Competition, GroupSummary, StudentSummary } from '../../../api/types'
 import { CoachError, CoachLoading } from '../../../components/coach/CoachScreenState'
-import { BADGES_KEY, badgesOf, PAID_KEY, paidKey, type IssuedBadge, type PaidMonths } from '../../../components/coach/home/helpers'
+import { badgesOf, PAID_KEY, paidKey, type PaidMonths } from '../../../components/coach/home/helpers'
+import { useCoachIssuedBadges } from '../../../hooks/useCoachIssuedBadges'
 import { useStoredState } from '../../../hooks/useStoredState'
 import { todayIsoDate, useStudentBelts } from '../../../hooks/useStudentBelts'
 import { rankLabel, stepName } from '../../../utils/beltSystem'
@@ -56,7 +57,7 @@ export function AnalyticsTool() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [edits] = useStoredState<GroupEdits>(GROUP_EDITS_KEY, EMPTY_GROUP_EDITS)
-  const [issuedLog] = useStoredState<IssuedBadge[]>(BADGES_KEY, [])
+  const { issued: issuedLog } = useCoachIssuedBadges()
   const [paid] = useStoredState<PaidMonths>(PAID_KEY, {})
   const { info: beltInfo } = useStudentBelts()
 

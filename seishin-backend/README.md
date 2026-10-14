@@ -64,6 +64,12 @@ Content-Type: application/json
 | POST | `/coach/students/{id}/belt` | Назначить пояс |
 | GET/POST | `/coach/groups` | Группы |
 | GET | `/coach/groups/{id}/students` | Ученики группы |
+| POST | `/coach/groups/{groupId}/students/{studentId}` | Добавить в группу (push другим тренерам) |
+| DELETE | `/coach/groups/{groupId}/students/{studentId}` | Убрать из группы |
+| GET | `/coach/notifications` | Уведомления |
+| GET | `/coach/notifications/unread-count` | Непрочитанные |
+| PATCH | `/coach/notifications/{id}/read` | Прочитать |
+| POST | `/coach/notifications/read-all` | Прочитать всё |
 | GET | `/coach/sessions/attendance` | Журнал занятия |
 | POST | `/coach/sessions/attendance/bulk` | Массовая отметка посещаемости |
 | GET | `/coach/badges` | Справочник бейджей |
@@ -82,6 +88,7 @@ Content-Type: application/json
 | GET/POST | `/coach/students/{id}/messages` | Личка с родителем ученика |
 | GET/POST | `/coach/competitions` | Список / создание |
 | GET | `/coach/competitions/{id}` | Карточка |
+| DELETE | `/coach/competitions/{id}` | Удаление мероприятия |
 | POST | `/coach/competitions/{id}/auto-categorize` | Авто-категоризация |
 | PATCH | `/coach/competitions/registrations/{id}/category` | Ручная категория |
 | GET | `/coach/competitions/{id}/export.xlsx` | Excel-экспорт |

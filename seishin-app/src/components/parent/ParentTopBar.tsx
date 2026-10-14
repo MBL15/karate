@@ -57,6 +57,7 @@ export function ParentTopBar({
 }) {
   const { selectedChild, clubs, multiClub } = useParentChild()
   const fullName = selectedChild ? `${selectedChild.firstName} ${selectedChild.lastName}` : 'Ребёнок'
+  const givenName = selectedChild?.firstName || 'Ребёнок'
   const club = multiClub && selectedChild ? clubs[selectedChild.id] : undefined
 
   const bell = (
@@ -92,7 +93,7 @@ export function ParentTopBar({
     <div className="flex items-center gap-3.5">
       <ChildAvatar childId={selectedChild?.id} name={fullName} size={60} editable />
       <div className="min-w-0 flex-1">
-        <ChildPicker name={fullName} large />
+        <ChildPicker name={givenName} large />
         <p className="mt-1 flex items-center gap-2 text-sm text-text-secondary">
           <span className="font-semibold text-text">{beltTitle(beltName ?? selectedChild?.beltName)}</span>
           <BeltMark color={beltColor ?? selectedChild?.beltColor} />

@@ -49,6 +49,7 @@ public class AuthService {
     private final GroupStudentRepository groupStudentRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final ClubDefaultsService clubDefaultsService;
 
     @Value("${seishin.otp.ttl-minutes:5}")
     private int otpTtlMinutes;
@@ -139,7 +140,11 @@ public class AuthService {
         if (clubName != null && !clubName.isBlank()) {
             String name = clubName.trim();
             return clubRepository.findByName(name)
-                    .orElseGet(() -> clubRepository.save(Club.builder().name(name).build()));
+                    .orElseGet(() -> {
+                        Club created = clubRepository.save(Club.builder().name(name).build());
+                        clubDefaultsService.ensureDefaults(created);
+                        return created;
+                    });
         }
         return clubRepository.findByName("Karate Hub")
                 .or(() -> clubRepository.findAll().stream().findFirst())

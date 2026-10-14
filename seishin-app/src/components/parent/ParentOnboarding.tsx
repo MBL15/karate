@@ -4,6 +4,7 @@ import { authApi, type LinkedChild } from '../../api/auth'
 import { parentApi } from '../../api/parent'
 import { ApiError } from '../../api/client'
 import { CodeBoxes, parentAccent } from '../auth/AuthWidgets'
+import { DateField } from '../ui/DateField'
 import {
   IconArrowLeft,
   IconBell,
@@ -246,16 +247,13 @@ export function ParentOnboarding() {
             </div>
             <div>
               <label className="text-sm font-semibold text-[#101828]" htmlFor="join-birth-date">Дата рождения</label>
-              <input
+              <DateField
                 id="join-birth-date"
-                type="date"
                 value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                required
+                onChange={setBirthDate}
                 min={minChildBirth}
                 max={maxChildBirth}
-                aria-invalid={birthError ? true : undefined}
-                className="mt-2 w-full rounded-2xl border border-[#e4e7ec] px-4 py-3 text-base text-[#101828] outline-none focus:border-[#16a34a]"
+                className="mt-2 w-full rounded-2xl border border-[#e4e7ec] px-4 py-3 text-left text-base outline-none"
               />
               {birthError && <p className="mt-1 text-sm text-[#b91c1c]">{birthError}</p>}
             </div>

@@ -90,6 +90,19 @@ export type SessionAttendance = {
   }[]
 }
 
+export type CoachNotificationKind = 'STUDENT_JOINED_GROUP'
+
+export type CoachNotification = {
+  id: number
+  kind: CoachNotificationKind
+  title: string
+  body: string
+  studentId: number | null
+  groupId: number | null
+  readAt: string | null
+  createdAt: string
+}
+
 export type CoachDashboard = {
   clubName?: string
   joinCode?: string | null
@@ -124,6 +137,8 @@ export type NextTraining = {
   groupName: string
   location: string | null
   intentStatus: 'PENDING' | 'CONFIRMED' | 'DECLINED'
+  topicTitle?: string | null
+  topicText?: string | null
 }
 
 export type ParentChildHome = {
@@ -149,6 +164,9 @@ export type ParentChildProfile = {
   progressPercent: number | null
   coachRecommendation: string | null
   clubName: string
+  clubDescription?: string | null
+  clubAddress?: string | null
+  clubLogo?: string | null
 } & BeltProgressMeta
 
 export type Achievement = {
@@ -190,6 +208,14 @@ export type Document = {
   content: string
 }
 
+export type CompetitionResult = {
+  competitionId: number
+  competitionName: string
+  eventDate: string
+  place: number
+  category: string | null
+}
+
 export type Registration = {
   id: number
   studentId: number
@@ -200,6 +226,8 @@ export type Registration = {
   rsvpStatus: 'PENDING' | 'CONFIRMED' | 'DECLINED'
   autoCategory: string | null
   effectiveCategory: string | null
+  resultPlace?: number | null
+  resultCategory?: string | null
 }
 
 export type BeltLevel = {
@@ -221,6 +249,32 @@ export type GroupSummary = {
   name: string
   studentCount: number
   assistantAccess: boolean
+  hidden?: boolean
+}
+
+export type CoachClubProfile = {
+  name: string
+  description?: string | null
+  address?: string | null
+  logo?: string | null
+  beltStateJson?: string | null
+}
+
+export type SessionPlan = {
+  groupId: number
+  sessionDate: string
+  startTime: string
+  topicTitle?: string | null
+  topicText?: string | null
+}
+
+export type CoachIssuedBadge = {
+  id: number
+  studentId: number
+  badgeId: number
+  badgeName: string
+  issuedAt: string
+  note?: string | null
 }
 
 export type BadgeDefinition = {

@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import type { ClassEvent, SessionAttendance } from '../../../api/types'
 import { IconBell, IconCalendar, IconCheck, IconMapPin, IconUsers } from '../../ui/Icons'
 import { useStoredState } from '../../../hooks/useStoredState'
+import { planForGroup, type SavedPlan } from '../../../utils/trainingPlan'
 import { TOPICS_KEY, type TrainingTopics } from './TrainingTopic'
 import { classKey, eventRange, GROUP_TONES, hhmm, minutesUntil, plural, toIso, untilLabel, weekdayLong, type AttendanceSummary } from './helpers'
 
@@ -22,6 +23,7 @@ export function TrainingsBoard({
   attendance,
   groupIndex,
   hasGroups,
+  hasSchedule,
   onOpen,
   onSchedule,
 }: {
@@ -35,6 +37,7 @@ export function TrainingsBoard({
   attendance: Record<string, SessionAttendance>
   groupIndex: (groupId: number) => number
   hasGroups: boolean
+  hasSchedule: boolean
   onOpen: (event: ClassEvent, tab: TrainingTab) => void
   onSchedule: () => void
 }) {
@@ -146,9 +149,13 @@ export function TrainingsBoard({
             <IconCalendar size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-text">Тренировок нет</p>
+            <p className="text-sm font-semibold text-text">{hasSchedule ? 'В этот день занятий нет' : 'Тренировок нет'}</p>
             <p className="text-xs text-text-secondary">
-              {hasGroups ? 'Тренировки появляются по расписанию групп' : 'Сначала создайте группы и поставьте им расписание'}
+              {hasSchedule
+                ? 'Расписание на месте — выберите другой день в полоске выше'
+                : hasGroups
+                  ? 'Тренировки появляются по расписанию групп'
+                  : 'Сначала создайте группы и поставьте им расписание'}
             </p>
           </div>
           <button type="button" onClick={onSchedule} className="shrink-0 text-sm font-semibold text-brand-blue">
@@ -203,10 +210,12 @@ function TrainingCard({
   onOpen: (tab: TrainingTab) => void
 }) {
   const [topics] = useStoredState<TrainingTopics>(TOPICS_KEY, {})
+  const [plans] = useStoredState<SavedPlan[]>('training-plans', [])
   const topic = topics[classKey(event)]
+  const plan = topic?.title ? null : planForGroup(plans, event.groupName)
   const minutes = minutesUntil(event, now)
   const marked = Boolean(summary?.marked)
-  const total = summary?.total || event.studentCount
+  const total = summary ? summary.total : event.studentCount
   const confirmed = session?.entries.filter((e) => e.parentIntent === 'CONFIRMED').length ?? 0
   const declined = session?.entries.filter((e) => e.parentIntent === 'DECLINED').length ?? 0
   const status = event.upcoming
@@ -261,6 +270,12 @@ function TrainingCard({
             {topic?.title && (
               <p className="mt-1.5 truncate text-xs text-text-secondary">
                 {event.upcoming ? 'План' : 'Тема'}: <span className="font-semibold text-text">{topic.title}</span>
+              </p>
+            )}
+            {plan && (
+              <p className="mt-1.5 line-clamp-2 text-xs text-text-secondary">
+                План: <span className="font-semibold text-text">{plan.name}</span>
+                {plan.blocks.length > 0 ? ` · ${plan.blocks.map((block) => block.title).join(' · ')}` : ''}
               </p>
             )}
           </div>

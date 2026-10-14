@@ -144,7 +144,7 @@ export function summarizeAttendance(
 ): AttendanceSummary {
   const serverMarked = Boolean(session?.sessionId)
   const marked = serverMarked || Boolean(local && Object.keys(local).length)
-  const ids = memberIds.length ? memberIds : (session?.entries.map((e) => e.studentId) ?? [])
+  const ids = memberIds
   let present = 0
   let absent = 0
   for (const id of ids) {

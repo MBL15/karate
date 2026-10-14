@@ -15,4 +15,6 @@ public interface CompetitionRegistrationRepository extends JpaRepository<Competi
     Optional<CompetitionRegistration> findByCompetitionIdAndStudentId(Long competitionId, Long studentId);
 
     long countByCompetition_Club_IdAndRsvpStatus(Long clubId, RsvpStatus rsvpStatus);
+
+    void deleteByCompetitionId(Long competitionId);
 }

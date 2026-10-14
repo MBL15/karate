@@ -1,4 +1,5 @@
 import { useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { DateField } from '../ui/DateField'
 import { IconArrowLeft, IconEye, IconEyeOff } from '../ui/Icons'
 
 export const coachAccent = '#2563eb'
@@ -45,6 +46,53 @@ export function RoleIcon({ tone, children, size = 'lg' }: { tone: Tone; children
     >
       {children}
     </span>
+  )
+}
+
+export function AuthDateField({
+  id,
+  label,
+  value,
+  onChange,
+  onBlur,
+  min,
+  max,
+  tone = 'parent',
+  error,
+  required,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  onBlur?: () => void
+  min?: string
+  max?: string
+  tone?: Tone
+  error?: string
+  required?: boolean
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="label">
+        {label}
+      </label>
+      <DateField
+        id={id}
+        value={value}
+        min={min}
+        max={max}
+        required={required}
+        className={`${tone === 'coach' ? 'input-coach' : 'input'} min-h-12`}
+        onChange={onChange}
+        onBlur={onBlur}
+      />
+      {error && (
+        <p id={`${id}-error`} className="mt-1.5 text-sm text-error">
+          {error}
+        </p>
+      )}
+    </div>
   )
 }
 

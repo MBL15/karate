@@ -2,6 +2,7 @@ package com.seishin.web.controller;
 
 import com.seishin.security.SecurityUtils;
 import com.seishin.service.CompetitionService;
+import com.seishin.web.dto.coach.RegistrationResultDto;
 import com.seishin.web.dto.competition.CategoryOverrideDto;
 import com.seishin.web.dto.competition.CompetitionDto;
 import com.seishin.web.dto.competition.CreateCompetitionDto;
@@ -37,6 +38,12 @@ public class CompetitionController {
         return ResponseEntity.ok(competitionService.getCompetition(SecurityUtils.requireCoach(), id));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        competitionService.deleteCompetition(SecurityUtils.requireCoach(), id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/auto-categorize")
     public ResponseEntity<CompetitionDto> autoCategorize(@PathVariable Long id) {
         return ResponseEntity.ok(competitionService.autoCategorize(SecurityUtils.requireCoach(), id));
@@ -47,6 +54,18 @@ public class CompetitionController {
             @PathVariable Long registrationId,
             @Valid @RequestBody CategoryOverrideDto dto) {
         return ResponseEntity.ok(competitionService.overrideCategory(SecurityUtils.requireCoach(), registrationId, dto));
+    }
+
+    @PatchMapping("/registrations/{registrationId}/result")
+    public ResponseEntity<RegistrationDto> updateResult(
+            @PathVariable Long registrationId,
+            @Valid @RequestBody RegistrationResultDto dto) {
+        return ResponseEntity.ok(competitionService.updateResult(SecurityUtils.requireCoach(), registrationId, dto));
+    }
+
+    @DeleteMapping("/registrations/{registrationId}/result")
+    public ResponseEntity<RegistrationDto> clearResult(@PathVariable Long registrationId) {
+        return ResponseEntity.ok(competitionService.clearResult(SecurityUtils.requireCoach(), registrationId));
     }
 
     @GetMapping("/{id}/export.xlsx")

@@ -1,26 +1,6 @@
-import { useRef, type ChangeEvent } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { useStoredState } from '../../hooks/useStoredState'
-
-const MAX_SIDE = 256
-
-function resizeToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      const side = Math.min(img.width, img.height)
-      const canvas = document.createElement('canvas')
-      canvas.width = canvas.height = Math.min(MAX_SIDE, side)
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return reject(new Error('canvas'))
-      ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, canvas.width, canvas.height)
-      URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.85))
-    }
-    img.onerror = reject
-    img.src = url
-  })
-}
+import { PhotoCrop } from '../ui/PhotoCrop'
 
 export function useChildPhoto(childId: number | null | undefined) {
   return useStoredState<string>(`child-photo:${childId ?? 'none'}`, '')
@@ -40,6 +20,7 @@ export function ChildAvatar({
   editable?: boolean
 }) {
   const [photo, setPhoto] = useStoredState<string>(photoKey ?? `child-photo:${childId ?? 'none'}`, '')
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const initials = name
     .split(' ')
@@ -49,15 +30,10 @@ export function ChildAvatar({
     .join('')
     .toUpperCase()
 
-  const onPick = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onPick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
-    try {
-      setPhoto(await resizeToDataUrl(file))
-    } catch {
-      /* unsupported image */
-    }
+    if (file) setCropFile(file)
   }
 
   const face = photo ? (
@@ -92,7 +68,17 @@ export function ChildAvatar({
           </span>
         )}
       </button>
-      <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => void onPick(e)} />
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      {cropFile && (
+        <PhotoCrop
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onDone={(data) => {
+            setPhoto(data)
+            setCropFile(null)
+          }}
+        />
+      )}
     </>
   )
 }

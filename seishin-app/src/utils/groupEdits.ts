@@ -14,13 +14,10 @@ export function applyGroupEdits(
   const pool = new Map<number, StudentSummary>()
   for (const s of [...extra, ...Object.values(members).flat()]) pool.set(s.id, s)
 
-  const visible = groups.filter((g) => !edits.hidden.includes(g.id))
+  const visible = groups.filter((g) => !g.hidden && !edits.hidden.includes(g.id))
   const result: Record<number, StudentSummary[]> = {}
   for (const g of visible) {
-    const ids = edits.members[g.id]
-    result[g.id] = ids
-      ? ids.map((id) => pool.get(id)).filter((s): s is StudentSummary => Boolean(s))
-      : (members[g.id] ?? [])
+    result[g.id] = members[g.id] ?? []
   }
 
   return {

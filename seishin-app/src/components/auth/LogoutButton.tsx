@@ -46,8 +46,7 @@ export function LogoutButton({ className = '', variant = 'profile', label, onOpe
     const role = isCoach ? 'coach' : 'parent'
     setOpen(false)
     sessionStorage.setItem(LOGGED_OUT_FLAG, '1')
-    logout()
-    navigate(`/login?role=${role}`, { replace: true })
+    void logout().then(() => navigate(`/login?role=${role}`, { replace: true }))
   }
 
   return (

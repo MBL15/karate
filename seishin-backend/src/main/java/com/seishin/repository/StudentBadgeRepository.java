@@ -8,5 +8,7 @@ import java.util.List;
 public interface StudentBadgeRepository extends JpaRepository<StudentBadge, Long> {
     List<StudentBadge> findByStudentIdOrderByIssuedAtDesc(Long studentId);
 
+    List<StudentBadge> findByStudentClubIdOrderByIssuedAtDesc(Long clubId);
+
     long countByStudentIdAndBadgeId(Long studentId, Long badgeId);
 }

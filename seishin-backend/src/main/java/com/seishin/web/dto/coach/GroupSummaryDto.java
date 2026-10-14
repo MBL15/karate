@@ -10,4 +10,5 @@ public class GroupSummaryDto {
     private String name;
     private int studentCount;
     private boolean assistantAccess;
+    private boolean hidden;
 }

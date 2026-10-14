@@ -28,4 +28,7 @@ public class AttendanceRecord {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private AttendanceStatus status;
+
+    @Column(length = 32)
+    private String absenceReason;
 }

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { tokenExpired } from '../api/client'
+import { AUTH_STORAGE_KEY, clearPersistedAuth, persistAuth, readAuthRaw } from '../utils/authStorage'
 import { markSessionExpired } from '../utils/session'
 import type { UserRole } from '../api/types'
 
@@ -17,20 +18,19 @@ export type AuthUser = {
 
 type AuthContextValue = {
   user: AuthUser | null
-  login: (user: AuthUser) => void
-  logout: () => void
+  login: (user: AuthUser) => Promise<void>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
-const STORAGE_KEY = 'seishin-auth'
 
 function loadUser(): AuthUser | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = readAuthRaw()
     if (!raw) return null
     const user = JSON.parse(raw) as AuthUser
     if (!user.token || tokenExpired(user.token)) {
-      localStorage.removeItem(STORAGE_KEY)
+      void clearPersistedAuth()
       markSessionExpired()
       return null
     }
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onUnauthorized = () => setUser(null)
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) setUser(loadUser())
+      if (e.key === AUTH_STORAGE_KEY) setUser(loadUser())
     }
     window.addEventListener('seishin-unauthorized', onUnauthorized)
     window.addEventListener('storage', onStorage)
@@ -59,12 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
-      login: (next: AuthUser) => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      login: async (next: AuthUser) => {
+        await persistAuth(JSON.stringify(next))
         setUser(next)
       },
-      logout: () => {
-        localStorage.removeItem(STORAGE_KEY)
+      logout: async () => {
+        await clearPersistedAuth()
         setUser(null)
       },
     }),

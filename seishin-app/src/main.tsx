@@ -4,19 +4,22 @@ import { BrowserRouter } from 'react-router-dom'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { NativeShell } from './components/NativeShell'
 import { AuthProvider } from './context/AuthContext'
+import { hydrateAuthStorage } from './utils/authStorage'
 import './index.css'
 import App from './App.tsx'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <NativeShell>
-        <AuthProvider>
-          <AppErrorBoundary>
-            <App />
-          </AppErrorBoundary>
-        </AuthProvider>
-      </NativeShell>
-    </BrowserRouter>
-  </StrictMode>,
-)
+void hydrateAuthStorage().finally(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <BrowserRouter>
+        <NativeShell>
+          <AuthProvider>
+            <AppErrorBoundary>
+              <App />
+            </AppErrorBoundary>
+          </AuthProvider>
+        </NativeShell>
+      </BrowserRouter>
+    </StrictMode>,
+  )
+})

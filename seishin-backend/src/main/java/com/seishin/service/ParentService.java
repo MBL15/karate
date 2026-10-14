@@ -39,9 +39,12 @@ public class ParentService {
     private final ClubRepository clubRepository;
     private final BeltProgressService beltProgressService;
     private final TrainingIntentService trainingIntentService;
+    private final GroupStudentRepository groupStudentRepository;
+    private final ClubDefaultsService clubDefaultsService;
 
     public List<StudentSummaryDto> listChildren(UserPrincipal parent) {
         return parentAccessService.linkedChildren(parent.getId()).stream()
+                .filter(student -> student.getLeftAt() == null)
                 .map(studentMapper::toSummary)
                 .toList();
     }
@@ -51,6 +54,7 @@ public class ParentService {
         User parentUser = userRepository.findById(parent.getId())
                 .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
         Club club = resolveClubForNewChild(parent.getId(), dto.getInviteCode());
+        leavePreviousClub(parent.getId(), dto.getFirstName().trim(), dto.getLastName().trim(), dto.getBirthDate(), club);
         BeltLevel belt = beltLevelRepository.findByClubIdOrderBySortOrderAsc(club.getId()).stream()
                 .findFirst()
                 .orElse(null);
@@ -74,14 +78,36 @@ public class ParentService {
         return studentMapper.toSummary(student);
     }
 
+    private void leavePreviousClub(Long parentId, String firstName, String lastName, LocalDate birthDate, Club nextClub) {
+        for (Student existing : parentAccessService.linkedChildren(parentId)) {
+            if (existing.getLeftAt() != null || existing.getClub().getId().equals(nextClub.getId())) {
+                continue;
+            }
+            if (!existing.getFirstName().equalsIgnoreCase(firstName)
+                    || !existing.getLastName().equalsIgnoreCase(lastName)
+                    || !existing.getBirthDate().equals(birthDate)) {
+                continue;
+            }
+            groupStudentRepository.deleteByStudentId(existing.getId());
+            existing.setLeftAt(Instant.now());
+            studentRepository.save(existing);
+        }
+    }
+
     private Club resolveClubForNewChild(Long parentId, String inviteCode) {
-        List<Student> existing = parentAccessService.linkedChildren(parentId);
+        if (inviteCode != null && !inviteCode.isBlank()) {
+            return clubFromCode(inviteCode);
+        }
+        List<Student> existing = parentAccessService.linkedChildren(parentId).stream()
+                .filter(student -> student.getLeftAt() == null)
+                .toList();
         if (!existing.isEmpty()) {
             return existing.getFirst().getClub();
         }
-        if (inviteCode == null || inviteCode.isBlank()) {
-            throw new BadRequestException("Укажите код приглашения от тренера");
-        }
+        throw new BadRequestException("Укажите код приглашения от тренера");
+    }
+
+    private Club clubFromCode(String inviteCode) {
         String code = inviteCode.trim();
         if (!code.matches("\\d{6}")) {
             throw new BadRequestException("Код — 6 цифр");
@@ -168,11 +194,15 @@ public class ParentService {
                 .maxRank(beltProgress.isMaxRank())
                 .coachRecommendation(student.getCoachRecommendation())
                 .clubName(student.getClub().getName())
+                .clubDescription(student.getClub().getDescription())
+                .clubAddress(student.getClub().getAddress())
+                .clubLogo(student.getClub().getLogo())
                 .build();
     }
 
     public List<AchievementDto> getAchievements(UserPrincipal parent, Long studentId) {
         Student student = parentAccessService.requireLinkedChild(parent, studentId);
+        clubDefaultsService.ensurePresetBadges(student.getClub());
         List<BadgeDefinition> badges = badgeDefinitionRepository.findByClubId(student.getClub().getId());
         return badges.stream().map(b -> {
             long count = studentBadgeRepository.countByStudentIdAndBadgeId(studentId, b.getId());
@@ -198,6 +228,7 @@ public class ParentService {
                         .date(a.getSession().getSessionDate())
                         .groupName(a.getSession().getGroup().getName())
                         .status(a.getStatus())
+                        .absenceReason(a.getAbsenceReason())
                         .build())
                 .toList();
     }
@@ -240,6 +271,23 @@ public class ParentService {
                         .eventDate(c.getEventDate())
                         .rsvpStatus(RsvpStatus.PENDING)
                         .build())
+                .toList();
+    }
+
+    public List<CompetitionResultDto> getCompetitionResults(UserPrincipal parent, Long studentId) {
+        Student student = parentAccessService.requireLinkedChild(parent, studentId);
+        LocalDate today = LocalDate.now();
+        return registrationRepository.findByStudentId(studentId).stream()
+                .filter(r -> r.getResultPlace() != null)
+                .filter(r -> !r.getCompetition().getEventDate().isAfter(today))
+                .map(r -> CompetitionResultDto.builder()
+                        .competitionId(r.getCompetition().getId())
+                        .competitionName(r.getCompetition().getName())
+                        .eventDate(r.getCompetition().getEventDate())
+                        .place(r.getResultPlace())
+                        .category(r.getResultCategory())
+                        .build())
+                .sorted((a, b) -> b.getEventDate().compareTo(a.getEventDate()))
                 .toList();
     }
 

@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { coachApi } from '../../../api/coach'
 import { ApiError } from '../../../api/client'
 import type { AttendanceStatus, BadgeDefinition, ClassEvent, SessionAttendance, StudentSummary } from '../../../api/types'
+import { useCoachIssuedBadges } from '../../../hooks/useCoachIssuedBadges'
 import { useStoredState } from '../../../hooks/useStoredState'
 import { useStudentBelts } from '../../../hooks/useStudentBelts'
+import { badgeEventNote, resolveBadgeId } from '../../../utils/coachSync'
 import { IconAward, IconBell, IconCalendar, IconCheck, IconPlus, IconUsers, IconX } from '../../ui/Icons'
 import { studentTag } from '../../../utils/beltSystem'
 import { BadgeToken } from '../../ui/BadgeToken'
@@ -13,7 +15,6 @@ import { TrainingTopic } from './TrainingTopic'
 import {
   ABSENCE_KEY,
   ABSENCE_REASONS,
-  BADGES_KEY,
   badgesOf,
   PRESET_BADGES,
   withPresetBadges,
@@ -27,7 +28,6 @@ import {
   untilLabel,
   weekdayLong,
   shortDate,
-  toIso,
   type AbsenceReasons,
   type IssuedBadge,
   type LocalMarks,
@@ -78,7 +78,7 @@ export function TrainingSheet({
   const started = !event.upcoming
   const [tab, setTab] = useState<Tab>(initialTab)
   const [badgeDefs, setBadgeDefs] = useState<BadgeDefinition[]>(PRESET_BADGES)
-  const [issuedLog, setIssuedLog] = useStoredState<IssuedBadge[]>(BADGES_KEY, [])
+  const { issued: issuedLog, refresh: refreshBadges } = useCoachIssuedBadges()
   const [awardFor, setAwardFor] = useState<number | null>(null)
   const [issuing, setIssuing] = useState<string | null>(null)
   const [localMarks, setLocalMarks] = useStoredState<LocalMarks>(MARKS_KEY, {})
@@ -130,27 +130,20 @@ export function TrainingSheet({
 
   const toggleAward = async (row: Row, badge: BadgeDefinition) => {
     const tag = studentTag(row)
-    const isMine = (b: IssuedBadge) =>
-      b.studentId === row.id && b.badgeId === badge.id && b.eventKey === eventKey && (!b.who || b.who === tag)
-    if (issuedLog.some(isMine)) {
-      setIssuedLog((log) => log.filter((b) => !isMine(b)))
-      setError(
-        badge.id > 0
-          ? `«${badge.name}» убран из вашего списка, но у родителей значок клуба останется — отозвать его пока нельзя`
-          : null,
-      )
-      return
-    }
     setIssuing(`${row.id}:${badge.id}`)
     setError(null)
     try {
-      if (badge.id > 0) await coachApi.issueBadge(row.id, badge.id)
-      setIssuedLog((log) => [
-        ...log,
-        { studentId: row.id, badgeId: badge.id, name: badge.name, date: toIso(new Date()), who: tag, eventKey },
-      ])
+      const serverBadgeId = await resolveBadgeId(badge, badgeDefs)
+      const isMine = (b: IssuedBadge) =>
+        b.studentId === row.id && b.badgeId === serverBadgeId && b.eventKey === eventKey && (!b.who || b.who === tag)
+      if (issuedLog.some(isMine)) {
+        setError(`«${badge.name}» уже выдан — отозвать значок у родителей пока нельзя`)
+        return
+      }
+      await coachApi.issueBadge(row.id, serverBadgeId, badgeEventNote(eventKey))
+      await refreshBadges()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Не удалось выдать значок')
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Не удалось выдать значок')
     } finally {
       setIssuing(null)
     }
@@ -158,7 +151,12 @@ export function TrainingSheet({
 
   const persist = useCallback(
     async (next: Record<number, Mark>) => {
-      const entries = Object.entries(next).map(([id, status]) => ({ studentId: Number(id), status: status as AttendanceStatus }))
+      const entries = Object.entries(next).map(([id, status]) => ({
+        studentId: Number(id),
+        status: status as AttendanceStatus,
+        absenceReason:
+          status === 'ABSENT' ? reasons[reasonKey(event, Number(id))] ?? null : null,
+      }))
       if (entries.length === 0) return
       setSaveState('saving')
       setError(null)
@@ -172,7 +170,7 @@ export function TrainingSheet({
         setSaveState('error')
       }
     },
-    [event],
+    [event, reasons],
   )
 
   const queueSave = (next: Record<number, Mark>) => {
@@ -409,7 +407,9 @@ export function TrainingSheet({
                   </section>
                 )}
 
-                <TrainingTopic eventKey={eventKey} planned={!started} />
+                {!started && (
+                  <TrainingTopic groupId={event.groupId} sessionDate={event.date} startTime={event.startTime} planned />
+                )}
 
                 {started && done === 0 && (
                   <p className="mt-4 text-center text-xs text-text-muted">Нажмите «Был» или «Не был» напротив ученика — отметки сохраняются сразу</p>
@@ -579,6 +579,10 @@ export function TrainingSheet({
                     )
                   })}
                 </ul>
+
+                {started && (
+                  <TrainingTopic groupId={event.groupId} sessionDate={event.date} startTime={event.startTime} planned={false} />
+                )}
 
                 {started && done > 0 && badgeDefs.length > 0 && (
                   <p className="mt-3 flex items-start gap-1.5 rounded-2xl bg-[#fffbeb] px-3 py-2.5 text-xs leading-relaxed text-[#92400e]">

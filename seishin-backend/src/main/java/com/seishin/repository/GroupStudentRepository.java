@@ -9,4 +9,10 @@ public interface GroupStudentRepository extends JpaRepository<GroupStudent, Long
     List<GroupStudent> findByGroupId(Long groupId);
 
     List<GroupStudent> findByStudentId(Long studentId);
+
+    boolean existsByGroupIdAndStudentId(Long groupId, Long studentId);
+
+    void deleteByGroupIdAndStudentId(Long groupId, Long studentId);
+
+    void deleteByStudentId(Long studentId);
 }

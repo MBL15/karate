@@ -45,7 +45,7 @@ import { useAuth } from '../context/AuthContext'
 import { useStoredState } from '../hooks/useStoredState'
 import { pendingTaskCount, TASKS_KEY, type CoachTask } from '../utils/coachTasks'
 import { applyGroupEdits, EMPTY_GROUP_EDITS, GROUP_EDITS_KEY, type GroupEdits } from '../utils/groupEdits'
-import { resizeImage } from '../utils/image'
+import { PhotoCrop } from '../components/ui/PhotoCrop'
 import { isAutoSchedule } from '../utils/schedule'
 import { dropAutoSchedule } from '../api/autoSchedule'
 
@@ -93,6 +93,7 @@ export function CoachDashboard() {
   reviewedRef.current = scheduleReviewed
   const [removingAuto, setRemovingAuto] = useState(false)
   const [photo, setPhoto] = useStoredState<string | null>('coach-photo', null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const [edits, setEdits] = useStoredState<GroupEdits>(GROUP_EDITS_KEY, EMPTY_GROUP_EDITS)
   const [localMarks] = useStoredState<LocalMarks>(MARKS_KEY, {})
   const [paid] = useStoredState<PaidMonths>(PAID_KEY, {})
@@ -195,14 +196,19 @@ export function CoachDashboard() {
     setMembers({ [groupId]: members[groupId].filter((s) => s.id !== studentId).map((s) => s.id) })
 
   const addTo = (groupId: number, studentId: number) => {
-    const next: Record<number, number[]> = {}
-    for (const g of groups) {
-      if (g.id !== groupId && members[g.id].some((s) => s.id === studentId)) {
-        next[g.id] = members[g.id].filter((s) => s.id !== studentId).map((s) => s.id)
+    void (async () => {
+      try {
+        if (groupOf.has(studentId)) return
+        await coachApi.addStudentToGroup(groupId, studentId)
+        const next: Record<number, number[]> = {
+          [groupId]: [...members[groupId].map((s) => s.id).filter((id) => id !== studentId), studentId],
+        }
+        setMembers(next)
+        await load()
+      } catch (e) {
+        setNotice(e instanceof ApiError ? e.message : 'Не удалось добавить в группу')
       }
-    }
-    next[groupId] = [...members[groupId].map((s) => s.id), studentId]
-    setMembers(next)
+    })()
   }
 
   const deleteGroup = (groupId: number) => {
@@ -323,12 +329,10 @@ export function CoachDashboard() {
     }
   }
 
-  const onPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onPhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
-    const data = await resizeImage(file, 320, true).catch(() => null)
-    if (data) setPhoto(data)
+    if (file) setCropFile(file)
   }
 
   const attention: AttentionItem[] = [
@@ -503,6 +507,7 @@ export function CoachDashboard() {
             attendance={attendance}
             groupIndex={groupIndex}
             hasGroups={groups.length > 0}
+            hasSchedule={ownSlots.length > 0}
             onOpen={openTraining}
             onSchedule={() => document.getElementById('schedule-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
           />
@@ -655,6 +660,16 @@ export function CoachDashboard() {
         onClose={() => setCreateSheet((s) => ({ ...s, open: false }))}
         onCreated={() => void load(true)}
       />
+      {cropFile && (
+        <PhotoCrop
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onDone={(data) => {
+            setPhoto(data)
+            setCropFile(null)
+          }}
+        />
+      )}
     </div>
   )
 }

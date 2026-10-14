@@ -11,7 +11,9 @@ import com.seishin.repository.CompetitionRegistrationRepository;
 import com.seishin.repository.CompetitionRepository;
 import com.seishin.repository.StudentRepository;
 import com.seishin.security.UserPrincipal;
+import com.seishin.web.dto.coach.RegistrationResultDto;
 import com.seishin.web.dto.competition.CategoryOverrideDto;
+import com.seishin.web.exception.BadRequestException;
 import com.seishin.web.dto.competition.CompetitionDto;
 import com.seishin.web.dto.competition.CreateCompetitionDto;
 import com.seishin.web.dto.competition.RegistrationDto;
@@ -76,6 +78,17 @@ public class CompetitionService {
     }
 
     @Transactional
+    public void deleteCompetition(UserPrincipal coach, Long id) {
+        Competition competition = competitionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Соревнование не найдено"));
+        if (!competition.getClub().getId().equals(coach.getClubId())) {
+            throw new NotFoundException("Соревнование не найдено");
+        }
+        registrationRepository.deleteByCompetitionId(id);
+        competitionRepository.delete(competition);
+    }
+
+    @Transactional
     public CompetitionDto autoCategorize(UserPrincipal coach, Long competitionId) {
         Competition competition = competitionRepository.findById(competitionId)
                 .orElseThrow(() -> new NotFoundException("Соревнование не найдено"));
@@ -92,6 +105,33 @@ public class CompetitionService {
             }
         }
         return toCompetitionDto(competition);
+    }
+
+    @Transactional
+    public RegistrationDto updateResult(UserPrincipal coach, Long registrationId, RegistrationResultDto dto) {
+        CompetitionRegistration reg = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new NotFoundException("Регистрация не найдена"));
+        if (!reg.getCompetition().getClub().getId().equals(coach.getClubId())) {
+            throw new NotFoundException("Регистрация не найдена");
+        }
+        if (reg.getRsvpStatus() != RsvpStatus.CONFIRMED) {
+            throw new BadRequestException("Итог можно указать только для подтвердивших участие");
+        }
+        reg.setResultPlace(dto.getPlace());
+        reg.setResultCategory(dto.getCategory() != null && !dto.getCategory().isBlank() ? dto.getCategory().trim() : null);
+        return toRegistrationDto(registrationRepository.save(reg));
+    }
+
+    @Transactional
+    public RegistrationDto clearResult(UserPrincipal coach, Long registrationId) {
+        CompetitionRegistration reg = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new NotFoundException("Регистрация не найдена"));
+        if (!reg.getCompetition().getClub().getId().equals(coach.getClubId())) {
+            throw new NotFoundException("Регистрация не найдена");
+        }
+        reg.setResultPlace(null);
+        reg.setResultCategory(null);
+        return toRegistrationDto(registrationRepository.save(reg));
     }
 
     @Transactional
@@ -173,6 +213,8 @@ public class CompetitionService {
                 .rsvpStatus(reg.getRsvpStatus())
                 .autoCategory(reg.getAutoCategory())
                 .effectiveCategory(effectiveCategory(reg))
+                .resultPlace(reg.getResultPlace())
+                .resultCategory(reg.getResultCategory())
                 .build();
     }
 

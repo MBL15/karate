@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { IconChevronDown, IconChevronRight } from '../components/ui/Icons'
+import { useAuth } from '../context/AuthContext'
 
 function ToriiMark() {
   return (
@@ -15,6 +16,9 @@ function ToriiMark() {
 }
 
 export function LandingPage() {
+  const { user } = useAuth()
+  if (user) return <Navigate to={user.role === 'COACH' ? '/coach' : '/app'} replace />
+
   return (
     <section className="relative isolate flex min-h-[100svh] flex-col overflow-hidden px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <picture>

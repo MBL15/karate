@@ -174,7 +174,7 @@ function LoginForm({ role }: { role: UserRole }) {
     setSubmitting(true)
     try {
       const data = await authApi.login(loginName.trim(), password, role)
-      login({
+      await login({
         userId: data.userId,
         name: data.name,
         login: data.login,

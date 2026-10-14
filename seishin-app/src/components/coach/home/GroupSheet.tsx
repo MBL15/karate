@@ -294,8 +294,9 @@ function MembersTab({
   const q = query.trim().toLowerCase()
   const candidates = pool
     .filter((s) => !members.some((m) => m.id === s.id))
+    .filter((s) => !groupOf.has(s.id))
     .filter((s) => !q || `${s.firstName} ${s.lastName}`.toLowerCase().includes(q))
-    .sort((a, b) => Number(groupOf.has(a.id)) - Number(groupOf.has(b.id)) || a.lastName.localeCompare(b.lastName, 'ru'))
+    .sort((a, b) => a.lastName.localeCompare(b.lastName, 'ru'))
 
   return (
     <div className="space-y-3">
@@ -373,9 +374,7 @@ function MembersTab({
             </span>
           )}
           <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-            {candidates.map((s) => {
-              const from = groupOf.get(s.id)
-              return (
+            {candidates.map((s) => (
                 <li key={s.id}>
                   <button
                     type="button"
@@ -389,18 +388,23 @@ function MembersTab({
                       <span className="block truncate text-text">
                         {s.lastName} {s.firstName}
                       </span>
-                      <span className="block text-xs text-text-secondary">{from ? `Сейчас в «${from}»` : 'Без группы'}</span>
+                      <span className="block text-xs text-text-secondary">Без группы</span>
                     </span>
                     <span className="flex size-8 items-center justify-center rounded-full bg-brand-blue text-white">
                       <IconPlus size={14} />
                     </span>
                   </button>
                 </li>
-              )
-            })}
+              ))}
             {candidates.length === 0 && (
               <li className="px-2 py-2 text-sm text-text-secondary">
-                {query ? 'Никого не нашли' : pool.length === 0 ? 'В клубе пока нет учеников.' : 'Все ученики клуба уже в этой группе.'}
+                {query
+                  ? 'Никого не нашли'
+                  : pool.length === 0
+                    ? 'В клубе пока нет учеников.'
+                    : pool.some((s) => groupOf.has(s.id))
+                      ? 'Свободных учеников нет — перевод из другой группы в «Базе», карточка ученика.'
+                      : 'Все ученики клуба уже в этой группе.'}
               </li>
             )}
           </ul>

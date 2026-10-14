@@ -6,9 +6,14 @@ import type {
   ChatMessage,
   ChatThread,
   ClassEvent,
+  CoachClubProfile,
   CoachDashboard,
+  CoachIssuedBadge,
+  CoachNotification,
+  SessionPlan,
   Competition,
   GroupSummary,
+  Registration,
   Payment,
   ScheduleSlot,
   SessionAttendance,
@@ -28,6 +33,17 @@ export const coachApi = {
       method: 'POST',
       body: JSON.stringify({ name }),
     }),
+  addStudentToGroup: (groupId: number, studentId: number) =>
+    apiFetch<void>(`/api/coach/groups/${groupId}/students/${studentId}`, { method: 'POST' }),
+  removeStudentFromGroup: (groupId: number, studentId: number) =>
+    apiFetch<void>(`/api/coach/groups/${groupId}/students/${studentId}`, { method: 'DELETE' }),
+  notifications: () => apiFetch<CoachNotification[]>('/api/coach/notifications'),
+  notificationUnreadCount: () => apiFetch<{ count: number }>('/api/coach/notifications/unread-count'),
+  markNotificationRead: (id: number) =>
+    apiFetch<void>(`/api/coach/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllNotificationsRead: () => apiFetch<void>('/api/coach/notifications/read-all', { method: 'POST' }),
+  removeStudent: (studentId: number) =>
+    apiFetch<void>(`/api/coach/students/${studentId}`, { method: 'DELETE' }),
   createStudent: (payload: {
     firstName: string
     lastName: string
@@ -53,11 +69,17 @@ export const coachApi = {
       method: 'PATCH',
       body: JSON.stringify({ sessionsRequired }),
     }),
-  assignBelt: (studentId: number, beltLevelId: number) =>
-    apiFetch<StudentSummary>(`/api/coach/students/${studentId}/belt`, {
+  assignBelt: (
+    studentId: number,
+    belt: number | { beltLevelId?: number; name?: string; color?: string; sortOrder?: number },
+  ) => {
+    const body = typeof belt === 'number' ? { beltLevelId: belt } : belt.beltLevelId != null ? { beltLevelId: belt.beltLevelId } : belt
+    return apiFetch<StudentSummary>(`/api/coach/students/${studentId}/belt`, {
       method: 'POST',
-      body: JSON.stringify({ beltLevelId }),
-    }),
+      body: JSON.stringify(body),
+    })
+  },
+  issuedBadges: () => apiFetch<CoachIssuedBadge[]>('/api/coach/badges/issued'),
   payments: () => apiFetch<Payment[]>('/api/payments'),
   updatePayment: (id: number, status: Payment['status'], paidDate?: string) =>
     apiFetch<Payment>(`/api/payments/${id}`, {
@@ -68,11 +90,44 @@ export const coachApi = {
     apiFetch<SessionAttendance>(
       `/api/coach/sessions/attendance?groupId=${groupId}&sessionDate=${sessionDate}&startTime=${encodeURIComponent(startTime)}`,
     ),
+  clubProfile: () => apiFetch<CoachClubProfile>('/api/coach/club/profile'),
+  clubProfileUpdate: (payload: Partial<CoachClubProfile>) =>
+    apiFetch<CoachClubProfile>('/api/coach/club/profile', { method: 'PUT', body: JSON.stringify(payload) }),
+  sessionPlan: (groupId: number, sessionDate: string, startTime: string) =>
+    apiFetch<SessionPlan>(
+      `/api/coach/sessions/plan?groupId=${groupId}&sessionDate=${sessionDate}&startTime=${encodeURIComponent(startTime)}`,
+    ),
+  saveSessionPlan: (payload: SessionPlan) =>
+    apiFetch<SessionPlan>('/api/coach/sessions/plan', { method: 'PUT', body: JSON.stringify(payload) }),
+  updateGroup: (groupId: number, hidden: boolean) =>
+    apiFetch<GroupSummary>(`/api/coach/groups/${groupId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ hidden }),
+    }),
+  updateStudent: (studentId: number, payload: { coachRecommendation?: string | null }) =>
+    apiFetch<StudentSummary>(`/api/coach/students/${studentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  ensureMonthlyPayment: (studentId: number, month: string) =>
+    apiFetch<Payment>('/api/payments/monthly', {
+      method: 'POST',
+      body: JSON.stringify({ studentId, month: `${month}-01` }),
+    }),
+  updateRegistrationResult: (registrationId: number, place: number, category?: string) =>
+    apiFetch<Registration>(`/api/coach/competitions/registrations/${registrationId}/result`, {
+      method: 'PATCH',
+      body: JSON.stringify({ place, category }),
+    }),
+  clearRegistrationResult: (registrationId: number) =>
+    apiFetch<Registration>(`/api/coach/competitions/registrations/${registrationId}/result`, {
+      method: 'DELETE',
+    }),
   markAttendance: (payload: {
     groupId: number
     sessionDate: string
     startTime: string
-    entries: { studentId: number; status: AttendanceStatus }[]
+    entries: { studentId: number; status: AttendanceStatus; absenceReason?: string | null }[]
   }) =>
     apiFetch<void>('/api/coach/sessions/attendance/bulk', {
       method: 'POST',
@@ -110,6 +165,8 @@ export const coachApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  deleteCompetition: (competitionId: number) =>
+    apiFetch<void>(`/api/coach/competitions/${competitionId}`, { method: 'DELETE' }),
 
   exportCompetition: async (competitionId: number) => {
     const token = getStoredToken()

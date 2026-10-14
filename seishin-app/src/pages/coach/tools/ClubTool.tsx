@@ -7,7 +7,7 @@ import { GroupsManager } from '../../../components/coach/tools/GroupsManager'
 import { SectionTitle, ToolCard, ToolShell } from '../../../components/coach/tools/ToolShell'
 import { IconCheck, IconClipboard, IconMapPin, IconPlus } from '../../../components/ui/Icons'
 import { useStoredState } from '../../../hooks/useStoredState'
-import { resizeImage } from '../../../utils/image'
+import { PhotoCrop } from '../../../components/ui/PhotoCrop'
 
 type ClubProfile = { name: string; description: string; address: string; logo: string | null }
 
@@ -21,17 +21,25 @@ export function ClubTool() {
   const [savedAt, setSavedAt] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
 
   useEffect(() => {
     let alive = true
-    coachApi
-      .createInviteCode()
-      .then((res) => {
+    Promise.all([coachApi.createInviteCode(), coachApi.clubProfile()])
+      .then(([invite, remote]) => {
         if (!alive) return
-        setCode(res.code)
-        setServerName(res.clubName)
+        setCode(invite.code)
+        setServerName(invite.clubName)
+        const next: ClubProfile = {
+          name: remote.name ?? invite.clubName,
+          description: remote.description ?? '',
+          address: remote.address ?? '',
+          logo: remote.logo ?? null,
+        }
+        setProfile(next)
+        setDraft(next)
       })
-      .catch((e) => alive && setError(e instanceof ApiError ? e.message : 'Не удалось получить код клуба'))
+      .catch((e) => alive && setError(e instanceof ApiError ? e.message : 'Не удалось загрузить клуб'))
     return () => {
       alive = false
     }
@@ -47,12 +55,10 @@ export function ClubTool() {
     window.setTimeout(() => setCopied(false), 1800)
   }
 
-  const onLogo = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onLogo = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
-    const logo = await resizeImage(file).catch(() => null)
-    if (logo) setDraft((d) => ({ ...d, logo }))
+    if (file) setCropFile(file)
   }
 
   return (
@@ -139,8 +145,24 @@ export function ClubTool() {
           type="button"
           disabled={!dirty}
           onClick={() => {
-            setProfile(draft)
-            setSavedAt(Date.now())
+            void coachApi
+              .clubProfileUpdate({
+                description: draft.description,
+                address: draft.address,
+                logo: draft.logo,
+              })
+              .then((saved) => {
+                const next = {
+                  name: saved.name ?? draft.name,
+                  description: saved.description ?? '',
+                  address: saved.address ?? '',
+                  logo: saved.logo ?? null,
+                }
+                setProfile(next)
+                setDraft(next)
+                setSavedAt(Date.now())
+              })
+              .catch((e) => setError(e instanceof ApiError ? e.message : 'Не удалось сохранить'))
           }}
           className="btn-coach mt-4 min-h-12 w-full rounded-2xl"
         >
@@ -157,7 +179,17 @@ export function ClubTool() {
         <GroupsManager />
       </ToolCard>
 
-      <p className="px-1 text-xs text-text-muted">Профиль клуба, пояса, удаление групп и изменения состава пока сохраняются только на этом устройстве. Новые группы создаются на сервере.</p>
+      <p className="px-1 text-xs text-text-muted">Профиль клуба и системы поясов синхронизируются с сервером — родители видят описание и адрес в блоке «Клуб».</p>
+      {cropFile && (
+        <PhotoCrop
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onDone={(logo) => {
+            setDraft((current) => ({ ...current, logo }))
+            setCropFile(null)
+          }}
+        />
+      )}
     </ToolShell>
   )
 }

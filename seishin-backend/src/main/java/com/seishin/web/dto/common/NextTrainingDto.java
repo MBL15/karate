@@ -19,4 +19,6 @@ public class NextTrainingDto {
     private String location;
     /** PENDING — родитель ещё не отметился */
     private RsvpStatus intentStatus;
+    private String topicTitle;
+    private String topicText;
 }

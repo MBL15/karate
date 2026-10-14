@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client'
 import { useParentChild } from '../../context/ParentChildContext'
 import { localIso } from '../../utils/athletePath'
 import { BottomSheet } from '../ui/BottomSheet'
+import { DateField } from '../ui/DateField'
 import { IconArrowLeft, IconCheck, IconUsers, IconX } from '../ui/Icons'
 
 const FIELD =
@@ -265,15 +266,7 @@ export function AddChildModal() {
           </div>
 
           <Field id="child-birth-date" label="Дата рождения">
-            <input
-              id="child-birth-date"
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className={FIELD}
-              required
-              max={localIso(new Date())}
-            />
+            <DateField id="child-birth-date" value={birthDate} onChange={setBirthDate} max={localIso(new Date())} className={FIELD} />
           </Field>
 
           {duplicate && (

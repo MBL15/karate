@@ -3,8 +3,10 @@ package com.seishin.web.controller;
 import com.seishin.security.SecurityUtils;
 import com.seishin.service.BeltService;
 import com.seishin.service.ChatService;
+import com.seishin.service.ClubProfileService;
 import com.seishin.service.CoachService;
 import com.seishin.service.ScheduleService;
+import com.seishin.service.SessionPlanService;
 import com.seishin.web.dto.chat.ChatMessageDto;
 import com.seishin.web.dto.chat.ChatThreadDto;
 import com.seishin.web.dto.chat.CreateChatGroupDto;
@@ -28,6 +30,8 @@ public class CoachController {
     private final BeltService beltService;
     private final ScheduleService scheduleService;
     private final ChatService chatService;
+    private final SessionPlanService sessionPlanService;
+    private final ClubProfileService clubProfileService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<CoachDashboardDto> dashboard() {
@@ -42,6 +46,12 @@ public class CoachController {
     @PostMapping("/students")
     public ResponseEntity<StudentSummaryDto> createStudent(@Valid @RequestBody CreateStudentDto dto) {
         return ResponseEntity.ok(coachService.createStudent(SecurityUtils.requireCoach(), dto));
+    }
+
+    @DeleteMapping("/students/{studentId}")
+    public ResponseEntity<Void> removeStudent(@PathVariable Long studentId) {
+        coachService.removeStudent(SecurityUtils.requireCoach(), studentId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/groups")
@@ -59,9 +69,30 @@ public class CoachController {
         return ResponseEntity.ok(coachService.createGroup(SecurityUtils.requireCoach(), dto));
     }
 
+    @PostMapping("/groups/{groupId}/students/{studentId}")
+    public ResponseEntity<Void> addStudentToGroup(
+            @PathVariable Long groupId,
+            @PathVariable Long studentId) {
+        coachService.addStudentToGroup(SecurityUtils.requireCoach(), groupId, studentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/groups/{groupId}/students/{studentId}")
+    public ResponseEntity<Void> removeStudentFromGroup(
+            @PathVariable Long groupId,
+            @PathVariable Long studentId) {
+        coachService.removeStudentFromGroup(SecurityUtils.requireCoach(), groupId, studentId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/badges")
     public ResponseEntity<List<BadgeDefinitionDto>> listBadges() {
         return ResponseEntity.ok(coachService.listBadges(SecurityUtils.requireCoach()));
+    }
+
+    @GetMapping("/badges/issued")
+    public ResponseEntity<List<IssuedBadgeDto>> listIssuedBadges() {
+        return ResponseEntity.ok(coachService.listIssuedBadges(SecurityUtils.requireCoach()));
     }
 
     @PostMapping("/students/{studentId}/belt")
@@ -69,6 +100,50 @@ public class CoachController {
             @PathVariable Long studentId,
             @Valid @RequestBody AssignBeltDto dto) {
         return ResponseEntity.ok(coachService.assignBelt(SecurityUtils.requireCoach(), studentId, dto));
+    }
+
+    @PatchMapping("/students/{studentId}")
+    public ResponseEntity<StudentSummaryDto> updateStudent(
+            @PathVariable Long studentId,
+            @Valid @RequestBody UpdateStudentDto dto) {
+        return ResponseEntity.ok(coachService.updateStudent(SecurityUtils.requireCoach(), studentId, dto));
+    }
+
+    @PatchMapping("/groups/{groupId}")
+    public ResponseEntity<GroupSummaryDto> updateGroup(
+            @PathVariable Long groupId,
+            @Valid @RequestBody UpdateGroupDto dto) {
+        return ResponseEntity.ok(coachService.updateGroup(SecurityUtils.requireCoach(), groupId, dto));
+    }
+
+    @GetMapping("/club/profile")
+    public ResponseEntity<CoachClubProfileDto> clubProfile() {
+        return ResponseEntity.ok(clubProfileService.getProfile(SecurityUtils.requireCoach()));
+    }
+
+    @PutMapping("/club/profile")
+    public ResponseEntity<CoachClubProfileDto> updateClubProfile(@Valid @RequestBody CoachClubProfileDto dto) {
+        return ResponseEntity.ok(clubProfileService.updateProfile(SecurityUtils.requireCoach(), dto));
+    }
+
+    @GetMapping("/sessions/plan")
+    public ResponseEntity<SessionPlanDto> getSessionPlan(
+            @RequestParam Long groupId,
+            @RequestParam LocalDate sessionDate,
+            @RequestParam java.time.LocalTime startTime) {
+        SessionPlanDto dto = sessionPlanService.getPlan(groupId, sessionDate, startTime).orElseGet(() -> {
+            SessionPlanDto empty = new SessionPlanDto();
+            empty.setGroupId(groupId);
+            empty.setSessionDate(sessionDate);
+            empty.setStartTime(startTime);
+            return empty;
+        });
+        return ResponseEntity.ok(dto);
+    }
+
+    @PutMapping("/sessions/plan")
+    public ResponseEntity<SessionPlanDto> saveSessionPlan(@Valid @RequestBody SessionPlanDto dto) {
+        return ResponseEntity.ok(sessionPlanService.savePlan(SecurityUtils.requireCoach(), dto));
     }
 
     @GetMapping("/sessions/attendance")

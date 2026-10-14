@@ -28,5 +28,6 @@ public class BulkAttendanceDto {
         private Long studentId;
         @NotNull
         private AttendanceStatus status;
+        private String absenceReason;
     }
 }

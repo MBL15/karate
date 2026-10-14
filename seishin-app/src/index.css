@@ -564,41 +564,20 @@ body {
 }
 
 .glass-bar {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.72) 0%, rgb(255 255 255 / 0.5) 100%);
-  border: 1px solid rgb(255 255 255 / 0.75);
-  box-shadow:
-    0 12px 32px rgb(15 23 42 / 0.14),
-    0 2px 6px rgb(15 23 42 / 0.06),
-    inset 0 1px 0 rgb(255 255 255 / 0.95),
-    inset 0 -1px 0 rgb(15 23 42 / 0.04);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-}
-
-.glass-sheen {
-  background:
-    radial-gradient(120% 80% at 50% -30%, rgb(255 255 255 / 0.85), transparent 60%),
-    linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35) 50%, transparent);
-  opacity: 0.6;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-nav);
 }
 
 .glass-indicator {
   transition:
-    left 0.55s cubic-bezier(0.34, 1.32, 0.5, 1),
-    width 0.3s ease;
+    left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: left;
 }
 
 .glass-blob {
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.96) 0%, rgb(255 255 255 / 0.84) 100%),
-    var(--glass-tone);
-  box-shadow:
-    0 6px 18px color-mix(in srgb, var(--glass-tone) 22%, transparent),
-    inset 0 1px 0 rgb(255 255 255 / 1),
-    inset 0 -2px 6px color-mix(in srgb, var(--glass-tone) 12%, transparent),
-    0 0 0 1px rgb(255 255 255 / 0.8);
-  animation: glass-stretch 0.55s cubic-bezier(0.34, 1.2, 0.5, 1);
+  background: color-mix(in srgb, var(--glass-tone) 12%, #fff);
 }
 
 @keyframes glass-stretch {

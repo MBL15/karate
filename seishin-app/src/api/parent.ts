@@ -2,6 +2,7 @@ import type {
   Achievement,
   ChatMessage,
   ChatThread,
+  CompetitionResult,
   Document,
   HistoryEntry,
   NextTraining,
@@ -42,6 +43,8 @@ export const parentApi = {
     }),
   profile: (childId: number) => apiFetch<ParentChildProfile>(`/api/parent/children/${childId}/profile`),
   achievements: (childId: number) => apiFetch<Achievement[]>(`/api/parent/children/${childId}/achievements`),
+  competitionResults: (childId: number) =>
+    apiFetch<CompetitionResult[]>(`/api/parent/children/${childId}/competition-results`),
   history: (childId: number) => apiFetch<HistoryEntry[]>(`/api/parent/children/${childId}/history`),
   payments: (childId: number) => apiFetch<Payment[]>(`/api/parent/children/${childId}/payments`),
   competitions: () => apiFetch<UpcomingCompetition[]>('/api/parent/competitions'),

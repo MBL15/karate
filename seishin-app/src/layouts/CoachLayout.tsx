@@ -7,10 +7,15 @@ import type { CoachOutletContext } from '../components/coach/coachCreateContext'
 import { CoachMobileNav } from '../components/coach/CoachMobileNav'
 import { CoachSidebar } from '../components/coach/CoachSidebar'
 import { BrandMark } from '../components/ui/BrandMark'
+import { CoachNotificationsSheet } from '../components/coach/CoachNotificationsSheet'
+import { CoachNotificationBell } from '../components/coach/CoachNotificationBell'
+import { CoachNotificationsProvider } from '../context/CoachNotificationsContext'
 import { useAuth } from '../context/AuthContext'
+import { useCoachClubSync } from '../hooks/useCoachClubSync'
 
 export function CoachLayout() {
   const { user } = useAuth()
+  useCoachClubSync()
   const { pathname } = useLocation()
   const isSecretPage = pathname.endsWith('/secret')
   const [createOpen, setCreateOpen] = useState(false)
@@ -38,6 +43,7 @@ export function CoachLayout() {
   }, [createParam, setSearchParams])
 
   return (
+    <CoachNotificationsProvider>
     <div className="coach-app-canvas min-h-screen">
       <SkipLink />
       <header className="sticky top-0 z-40 hidden border-b border-white/10 bg-navy-950 lg:block">
@@ -46,7 +52,8 @@ export function CoachLayout() {
             <BrandMark variant="coach" size="sm" />
             <span className="text-sm font-semibold text-white">Кабинет тренера</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <CoachNotificationBell className="text-white hover:bg-white/10" />
             <div className="text-right">
               <p className="text-sm font-medium text-white">{user?.name}</p>
               <p className="text-xs text-white/80">Главный тренер</p>
@@ -76,6 +83,8 @@ export function CoachLayout() {
         onToggleCreate={() => (createOpen ? setCreateOpen(false) : openCreate())}
       />
       <CoachCreateSheet open={createOpen} initialView={createView} onClose={() => setCreateOpen(false)} />
+      <CoachNotificationsSheet />
     </div>
+    </CoachNotificationsProvider>
   )
 }

@@ -153,7 +153,7 @@ export function BeltSystemEditor({
       ...s,
       kyu,
       dan,
-      levels: buildLevels(s.style, kyu, dan, kyu === s.kyu ? s.levels : s.levels.filter((l) => l.rank === 'dan')),
+      levels: buildLevels(s.style, kyu, dan, s.levels),
     }))
 
   const update = (id: string, patch: Partial<BeltLevel>) =>

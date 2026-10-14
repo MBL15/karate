@@ -7,6 +7,7 @@ import type { AuthResponse, UserRole } from '../api/types'
 import {
   AuthBack,
   AuthButton,
+  AuthDateField,
   AuthField,
   AuthShell,
   CodeBoxes,
@@ -314,7 +315,7 @@ function AccountStep({ role, onDone }: { role: UserRole; onDone: (data: AuthResp
         role,
         clubName: isCoach ? clubName.trim() : undefined,
       })
-      login({
+      await login({
         userId: data.userId,
         name: data.name,
         login: data.login,
@@ -577,16 +578,14 @@ function CoachProfileStep({ onDone }: { onDone: () => void }) {
           autoComplete="email"
           maxLength={120}
         />
-        <AuthField
+        <AuthDateField
           id={profileIds.birthDate}
           label="Дата рождения (необязательно)"
           tone="coach"
-          icon={<IconCalendar size={18} />}
-          type="date"
           value={birthDate}
           min="1930-01-01"
           max={maxBirth}
-          onChange={(e) => setBirthDate(e.target.value)}
+          onChange={setBirthDate}
           onBlur={() => mark('birthDate')}
           error={visible('birthDate')}
         />
@@ -865,16 +864,14 @@ function ParentLinkStep({
               maxLength={80}
               required
             />
-            <AuthField
+            <AuthDateField
               id="reg-child-birth"
               label="Дата рождения"
-              icon={<IconCalendar size={18} />}
-              type="date"
               value={birthDate}
               min={minChildBirth}
               max={maxChildBirth}
-              onChange={(e) => setBirthDate(e.target.value)}
-              error={childBirthError || undefined}
+              onChange={setBirthDate}
+              error={childBirthError ? 'Укажите возраст от 3 до 25 лет' : undefined}
               required
             />
           </div>

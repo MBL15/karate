@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import { coachApi } from '../../api/coach'
 import type { Competition, StudentSummary } from '../../api/types'
 import { studentProgress } from '../../utils/nextBeltProgress'
-import { useStoredState } from '../../hooks/useStoredState'
+import { useCoachIssuedBadges } from '../../hooks/useCoachIssuedBadges'
 import { todayIsoDate, useStudentBelts } from '../../hooks/useStudentBelts'
-import { BADGES_KEY, badgesOf, type IssuedBadge } from './home/helpers'
+import { syncAssignBelt } from '../../utils/coachSync'
+import { badgesOf, type IssuedBadge } from './home/helpers'
 import { rankLabel, stepName, styleLabel, type BeltStep } from '../../utils/beltSystem'
 import { BadgeToken } from '../ui/BadgeToken'
 import { BottomSheet } from '../ui/BottomSheet'
+import { DateField } from '../ui/DateField'
 import { IconAward, IconCheck, IconUsers, IconX } from '../ui/Icons'
 import { BeltStrip } from './BeltStrip'
 import { ParentAccessCode } from './ParentAccessCode'
@@ -49,6 +51,7 @@ export function StudentSheet({
   initialGroupId = null,
   allGroups = [],
   onMove,
+  onRemoveFromClub,
   onClose,
 }: {
   open: boolean
@@ -58,6 +61,7 @@ export function StudentSheet({
   initialGroupId?: number | null
   allGroups?: { id: number; name: string }[]
   onMove?: (toGroupId: number, fromGroupId: number | null) => void
+  onRemoveFromClub?: () => void | Promise<void>
   onClose: () => void
 }) {
   const { systems, systemsFor, systemsForStudent, info, pinStudentSystem, infoIn, assign, undoLast } = useStudentBelts()
@@ -77,7 +81,7 @@ export function StudentSheet({
   const fullName = `${student.firstName} ${student.lastName}`
   const groupLine = groups.length > 1 ? groups.map((g) => g.name).join(', ') : groupName
   const styleChanged = Boolean(pickSystem && system && pickSystem.id !== system.id)
-  const [issuedLog, setIssuedLog] = useStoredState<IssuedBadge[]>(BADGES_KEY, [])
+  const { issued: issuedLog } = useCoachIssuedBadges()
   const myAwards = badgesOf(issuedLog, student)
   const awards = groupAwards(myAwards)
   const awardsTotal = awards.reduce((sum, a) => sum + a.count, 0)
@@ -96,28 +100,29 @@ export function StudentSheet({
   const progress = system ? studentProgress(system, belt.record, student, myAwards, competitions, todayIsoDate()) : null
   const [moving, setMoving] = useState(false)
   const [moveTo, setMoveTo] = useState<number | null>(null)
+  const [removing, setRemoving] = useState(false)
   const fromGroup = groups.find((g) => g.id === initialGroupId) ?? groups[0] ?? null
   const moveTargets = allGroups.filter((g) => !groups.some((m) => m.id === g.id))
   const moveTarget = moveTargets.find((g) => g.id === moveTo) ?? null
   const openEntries = myAwards.filter((b) => b.badgeId === openAward).sort((a, b) => b.date.localeCompare(a.date))
 
-  const removeAward = (entry: IssuedBadge) => {
-    setIssuedLog((log) => {
-      const i = log.findIndex(
-        (b) =>
-          b.studentId === entry.studentId &&
-          b.badgeId === entry.badgeId &&
-          b.date === entry.date &&
-          b.eventKey === entry.eventKey &&
-          b.who === entry.who,
-      )
-      return i < 0 ? log : [...log.slice(0, i), ...log.slice(i + 1)]
-    })
+  const removeAward = (_entry: IssuedBadge) => {
+    setDone('Отозвать значок у родителей пока нельзя — только выдача синхронизируется с сервером')
   }
 
-  const confirm = (level: BeltStep) => {
+  const confirm = async (level: BeltStep) => {
     if (!pickSystem) return
-    if (pickCurrent?.id !== level.id) assign([student], pickSystem.id, level.id, date)
+    const needBelt = pickCurrent?.id !== level.id
+    if (needBelt) assign([student], pickSystem.id, level.id, date)
+    if (needBelt) {
+      try {
+        await syncAssignBelt(student.id, level)
+      } catch {
+        setDone('Пояс сохранён на этом устройстве, но не синхронизирован — родитель может не увидеть изменение')
+        setMode('view')
+        return
+      }
+    }
     if (styleChanged) {
       pinStudentSystem(student, systemsFor(groupIds).some((s) => s.id === pickSystem.id) ? null : pickSystem.id)
       setSystemId(pickSystem.id)
@@ -445,7 +450,9 @@ export function StudentSheet({
           </ul>
           <label className="mt-3 block text-xs font-medium text-text-secondary">
             С какой даты
-            <input type="date" value={date} max={todayIsoDate()} onChange={(e) => setDate(e.target.value || todayIsoDate())} className="input-coach mt-1" />
+            <span className="mt-1 block">
+              <DateField value={date} max={todayIsoDate()} onChange={setDate} required />
+            </span>
           </label>
           <div className="mt-3 flex gap-2">
             <button type="button" onClick={() => setMode('view')} className="btn-secondary min-h-11 flex-1 rounded-2xl">
@@ -575,7 +582,40 @@ export function StudentSheet({
 
       {mode === 'view' && <ParentAccessCode key={student.id} studentId={student.id} studentName={fullName} />}
 
-      <p className="mt-5 text-center text-[11px] leading-snug text-text-muted">Значки из базы клуба родители видят сразу. Пояс, группа и базовые значки («Дисциплина», «Техника» и др.) пока хранятся на этом устройстве — родители увидят их после обновления сервера.</p>
+      {mode === 'view' && onRemoveFromClub && (
+        <div className="mt-6 border-t border-border-light pt-4">
+          <button
+            type="button"
+            disabled={removing}
+            onClick={() => {
+              const ok = window.confirm(
+                `Удалить ${fullName} из клуба? Ученик пропадёт из базы и статистики. Родители больше не увидят его в дневнике.`,
+              )
+              if (!ok) return
+              void (async () => {
+                setRemoving(true)
+                try {
+                  await Promise.resolve(onRemoveFromClub())
+                  onClose()
+                } catch (err) {
+                  const text = err instanceof Error ? err.message : 'Не удалось удалить ученика'
+                  window.alert(text)
+                } finally {
+                  setRemoving(false)
+                }
+              })()
+            }}
+            className="min-h-11 w-full rounded-2xl border border-error/30 bg-error-bg text-sm font-semibold text-error transition active:scale-[0.98] disabled:opacity-50"
+          >
+            {removing ? 'Удаляем…' : 'Удалить из клуба'}
+          </button>
+          <p className="mt-2 text-center text-[11px] text-text-muted">
+            Чтобы только убрать из группы, переведите в другую или оставьте в «Без группы» через настройки клуба.
+          </p>
+        </div>
+      )}
+
+      <p className="mt-5 text-center text-[11px] leading-snug text-text-muted">Значики из базы клуба родители видят сразу. Пояс, группа и базовые значки («Дисциплина», «Техника» и др.) пока хранятся на этом устройстве — родители увидят их после обновления сервера.</p>
     </BottomSheet>
   )
 }

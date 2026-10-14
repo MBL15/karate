@@ -65,6 +65,11 @@ public class ParentController {
         return ResponseEntity.ok(parentService.getAchievements(SecurityUtils.requireParent(), id));
     }
 
+    @GetMapping("/children/{id}/competition-results")
+    public ResponseEntity<List<CompetitionResultDto>> competitionResults(@PathVariable Long id) {
+        return ResponseEntity.ok(parentService.getCompetitionResults(SecurityUtils.requireParent(), id));
+    }
+
     @GetMapping("/children/{id}/history")
     public ResponseEntity<List<HistoryEntryDto>> history(@PathVariable Long id) {
         return ResponseEntity.ok(parentService.getHistory(SecurityUtils.requireParent(), id));

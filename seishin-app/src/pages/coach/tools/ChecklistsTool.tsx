@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { SectionTitle, ToolCard, ToolShell } from '../../../components/coach/tools/ToolShell'
+import { DateField } from '../../../components/ui/DateField'
 import { IconCheck, IconPlus, IconX } from '../../../components/ui/Icons'
 import { useStoredState } from '../../../hooks/useStoredState'
 import {
@@ -204,7 +205,7 @@ export function ChecklistsTool() {
             ))}
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="input-coach" aria-label="Дата" required />
+            <DateField value={due} onChange={setDue} className="input-coach" required />
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="input-coach" aria-label="Время" />
           </div>
           <textarea
