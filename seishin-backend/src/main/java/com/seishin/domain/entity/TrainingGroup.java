@@ -28,7 +28,15 @@ public class TrainingGroup {
     private User coach;
 
     /** Скрыта из расписания и списков, состав на сервере сохраняется. */
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Builder.Default
-    private boolean hidden = false;
+    private Boolean hidden = false;
+
+    public boolean isHidden() {
+        return Boolean.TRUE.equals(hidden);
+    }
+
+    public void setHidden(boolean value) {
+        this.hidden = value;
+    }
 }
