@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react'
-import type { Competition } from '../../api/types'
+import type { Competition, Registration } from '../../api/types'
 import { coachApi } from '../../api/coach'
 import { ApiError } from '../../api/client'
 import { ageText } from '../../utils/format'
@@ -13,6 +13,64 @@ function todayIso() {
 }
 
 const DISCIPLINE: Record<string, string> = { KATA: 'Ката', KUMITE: 'Кумитэ', TEAM: 'Команда' }
+
+const RSVP_GROUPS = [
+  { status: 'CONFIRMED' as const, label: 'Подтвердили' },
+  { status: 'DECLINED' as const, label: 'Отказались' },
+  { status: 'PENDING' as const, label: 'Не ответили' },
+]
+
+function sortByName(regs: Registration[]) {
+  return [...regs].sort((a, b) => a.studentName.localeCompare(b.studentName, 'ru'))
+}
+
+function RegistrationRsvpRow({ registration: r }: { registration: Registration }) {
+  return (
+    <li className="rounded-2xl border border-border-light bg-white px-3 py-2 shadow-[var(--shadow-card)]">
+      <p className="text-sm font-semibold text-text">{r.studentName}</p>
+      <p className="text-xs text-text-secondary">
+        {ageText(r.age)}
+        {r.discipline ? ` · ${DISCIPLINE[r.discipline] ?? r.discipline}` : ''}
+      </p>
+    </li>
+  )
+}
+
+function RegistrationRsvpSections({
+  registrations,
+  statuses = RSVP_GROUPS.map((g) => g.status),
+}: {
+  registrations: Registration[]
+  statuses?: Array<(typeof RSVP_GROUPS)[number]['status']>
+}) {
+  const groups = useMemo(
+    () =>
+      RSVP_GROUPS.filter((g) => statuses.includes(g.status)).map((g) => ({
+        ...g,
+        items: sortByName(registrations.filter((r) => r.rsvpStatus === g.status)),
+      })),
+    [registrations, statuses],
+  )
+  const visible = groups.filter((g) => g.items.length > 0)
+  if (visible.length === 0) return null
+
+  return (
+    <div className="space-y-4">
+      {visible.map((g) => (
+        <section key={g.status}>
+          <p className="text-xs font-semibold text-text-secondary">
+            {g.label}: {g.items.length}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {g.items.map((r) => (
+              <RegistrationRsvpRow key={r.id} registration={r} />
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
 
 export function CompetitionResultsSheet({
   competition: current,
@@ -44,6 +102,10 @@ export function CompetitionResultsSheet({
     [competition],
   )
   const filled = participants.filter((r) => r.resultPlace != null).length
+  const allRegistrations = competition?.registrations ?? []
+  const pendingOrDeclined = allRegistrations.some(
+    (r) => r.rsvpStatus === 'PENDING' || r.rsvpStatus === 'DECLINED',
+  )
 
   const setResult = (registrationId: number, patch: { place?: ResultPlace; category?: string }, fallbackCategory: string) => {
     const reg = participants.find((r) => r.id === registrationId)
@@ -93,9 +155,29 @@ export function CompetitionResultsSheet({
       {error && <p className="mt-3 text-sm font-medium text-error">{error}</p>}
 
       {!started ? (
-        <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm text-text-secondary">Итоги можно вносить в день соревнования и позже — родители увидят их в «Спортсмене».</p>
+        <>
+          <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm text-text-secondary">
+            Итоги можно вносить в день соревнования и позже — родители увидят их в «Спортсмене».
+          </p>
+          {allRegistrations.length === 0 ? (
+            <p className="mt-4 text-sm text-text-secondary">Приглашений пока нет — они появятся у родителей после создания мероприятия.</p>
+          ) : (
+            <div className="mt-4">
+              <RegistrationRsvpSections registrations={allRegistrations} />
+            </div>
+          )}
+        </>
       ) : participants.length === 0 ? (
-        <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm text-text-secondary">Нет подтвердивших участие — некому проставлять места.</p>
+        <>
+          <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm text-text-secondary">
+            Нет подтвердивших участие — некому проставлять места.
+          </p>
+          {allRegistrations.length > 0 && (
+            <div className="mt-4">
+              <RegistrationRsvpSections registrations={allRegistrations} />
+            </div>
+          )}
+        </>
       ) : (
         <>
           <p className="mt-3 text-xs text-text-secondary">
@@ -147,6 +229,11 @@ export function CompetitionResultsSheet({
               )
             })}
           </ul>
+          {pendingOrDeclined && (
+            <div className="mt-5 border-t border-border-light pt-4">
+              <RegistrationRsvpSections registrations={allRegistrations} statuses={['DECLINED', 'PENDING']} />
+            </div>
+          )}
         </>
       )}
 
