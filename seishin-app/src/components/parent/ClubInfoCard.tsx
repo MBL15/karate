@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { parentApi } from '../../api/parent'
-import type { ParentChildHome } from '../../api/types'
+import type { ParentChildHome, ParentChildProfile } from '../../api/types'
 import { childGroupName } from '../../utils/childGroup'
 import { formatDate } from '../../utils/format'
 import { beltTitle } from '../../utils/parentReadiness'
@@ -27,6 +27,7 @@ const time = (value: string | null | undefined) => (value ? value.slice(0, 5) : 
 
 export function ClubInfoCard({ childId, childName, clubName }: { childId: number | null; childName: string; clubName: string }) {
   const [home, setHome] = useState<ParentChildHome | null>(null)
+  const [club, setClub] = useState<ParentChildProfile | null>(null)
   const [groupName, setGroupName] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 
@@ -34,12 +35,14 @@ export function ClubInfoCard({ childId, childName, clubName }: { childId: number
     if (childId == null) return
     let alive = true
     setHome(null)
+    setClub(null)
     setGroupName(null)
     setFailed(false)
-    Promise.all([parentApi.home(childId), parentApi.history(childId).catch(() => [])])
-      .then(([h, history]) => {
+    Promise.all([parentApi.home(childId), parentApi.profile(childId), parentApi.history(childId).catch(() => [])])
+      .then(([h, profile, history]) => {
         if (!alive) return
         setHome(h)
+        setClub(profile)
         setGroupName(childGroupName(h.nextTraining?.groupName, history))
       })
       .catch(() => alive && setFailed(true))
@@ -49,7 +52,9 @@ export function ClubInfoCard({ childId, childName, clubName }: { childId: number
   }, [childId])
 
   const next = home?.nextTraining
-  const initials = clubName
+  const displayName = club?.clubName || clubName
+  const hallAddress = club?.clubAddress?.trim() || next?.location?.trim() || ''
+  const initials = displayName
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -60,17 +65,25 @@ export function ClubInfoCard({ childId, childName, clubName }: { childId: number
   return (
     <div className="card divide-y divide-border-light overflow-hidden p-0">
       <div className="flex items-center gap-4 px-4 py-4">
-        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-brand-green-light text-lg font-extrabold text-brand-green">
-          {initials || '?'}
-        </span>
+        {club?.clubLogo ? (
+          <img src={club.clubLogo} alt="" className="size-14 shrink-0 rounded-2xl object-cover" />
+        ) : (
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-brand-green-light text-lg font-extrabold text-brand-green">
+            {initials || '?'}
+          </span>
+        )}
         <div className="min-w-0">
-          <p className="truncate text-lg font-bold text-text">{clubName}</p>
+          <p className="truncate text-lg font-bold text-text">{displayName}</p>
           <p className="text-xs text-text-secondary">{childName} занимается здесь</p>
         </div>
       </div>
 
       <Row icon={<IconUsers size={18} />} title="О клубе">
-        <Pending text="Скоро: описание, стиль и фото клуба от тренера" />
+        {club?.clubDescription?.trim() ? (
+          <p className="whitespace-pre-wrap">{club.clubDescription.trim()}</p>
+        ) : (
+          <Pending text="Тренер ещё не добавил описание клуба" />
+        )}
       </Row>
 
       <Row icon={<IconCalendar size={18} />} title="Группа и тренировки">
@@ -84,7 +97,7 @@ export function ClubInfoCard({ childId, childName, clubName }: { childId: number
       </Row>
 
       <Row icon={<IconMapPin size={18} />} title="Адрес зала">
-        {next?.location ? <p className="font-semibold">{next.location}</p> : <Pending text="Адрес появится, когда тренер его укажет" />}
+        {hallAddress ? <p className="font-semibold">{hallAddress}</p> : <Pending text="Адрес появится, когда тренер его укажет" />}
       </Row>
 
       <Row icon={<IconAward size={18} />} title="Система поясов">
@@ -115,7 +128,7 @@ export function ClubInfoCard({ childId, childName, clubName }: { childId: number
       </Row>
 
       <Row icon={<IconUser size={18} />} title="Тренер">
-        <Pending text="Имя и фото тренера появятся здесь" />
+        {club?.coachName?.trim() ? <p className="font-semibold">{club.coachName.trim()}</p> : <Pending text="Имя тренера появится здесь" />}
       </Row>
     </div>
   )

@@ -10,6 +10,8 @@ export type AuthResponse = {
   clubId: number | null
 }
 
+export type AuthMe = Omit<AuthResponse, 'token'>
+
 export type BeltAssignmentMode = 'MANUAL' | 'ATTENDANCE' | 'READINESS'
 
 export type BeltProgressMeta = {
@@ -167,6 +169,7 @@ export type ParentChildProfile = {
   clubDescription?: string | null
   clubAddress?: string | null
   clubLogo?: string | null
+  coachName?: string | null
 } & BeltProgressMeta
 
 export type Achievement = {

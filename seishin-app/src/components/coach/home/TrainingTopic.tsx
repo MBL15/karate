@@ -157,9 +157,17 @@ export function TrainingTopic({
               )
             })}
           </div>
-          {picked.length > 0 && <TopicPickedBlocksBar picked={picked} className="mt-3" />}
+          {picked.length > 0 && (
+            <>
+              <TopicPickedBlocksBar picked={picked} className="mt-3" />
+              <p className="mt-2.5 text-xs text-text-secondary">
+                В плане:{' '}
+                <span className="font-semibold text-text">{picked.join(', ')}</span>
+              </p>
+            </>
+          )}
           {customTitle.trim() && (
-            <p className="mt-2.5 text-xs text-text-secondary">
+            <p className="mt-2 text-xs text-text-secondary">
               Уточнение: <span className="font-semibold text-text">{customTitle.trim()}</span>
             </p>
           )}
@@ -228,7 +236,14 @@ export function TrainingTopic({
           {showTags ? (
             <>
               <TopicTags title={title} className="mt-1.5" />
-              {parsed.picked.length > 0 && <TopicPickedBlocksBar picked={parsed.picked} className="mt-2.5" />}
+              {parsed.picked.length > 0 && (
+                <>
+                  <TopicPickedBlocksBar picked={parsed.picked} className="mt-2.5" tall={false} />
+                  <span className="mt-1.5 block text-xs text-text-secondary">
+                    В плане: <span className="font-semibold text-text">{parsed.picked.join(', ')}</span>
+                  </span>
+                </>
+              )}
             </>
           ) : (
             <span className="block font-semibold text-text">{title.trim() || 'Без названия'}</span>

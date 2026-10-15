@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 
-const EVENT = 'kh-stored-state'
+export const STORED_STATE_EVENT = 'kh-stored-state'
 
 export function storedKey(userId: number | undefined, key: string) {
   return `kh:${userId ?? 'guest'}:${key}`
+}
+
+export function notifyStoredStateChange(fullKey: string) {
+  window.dispatchEvent(new CustomEvent(STORED_STATE_EVENT, { detail: fullKey }))
 }
 
 export function readStored<T>(fullKey: string, fallback: T): T {
@@ -53,8 +57,8 @@ export function useStoredState<T>(key: string, initial: T) {
     const sync = (event: Event) => {
       if ((event as CustomEvent<string>).detail === fullKey) setState({ key: fullKey, value: readStored(fullKey, fallback) })
     }
-    window.addEventListener(EVENT, sync)
-    return () => window.removeEventListener(EVENT, sync)
+    window.addEventListener(STORED_STATE_EVENT, sync)
+    return () => window.removeEventListener(STORED_STATE_EVENT, sync)
   }, [fullKey, fallback])
 
   const update = useCallback(
@@ -67,7 +71,7 @@ export function useStoredState<T>(key: string, initial: T) {
         } catch {
           /* storage full */
         }
-        queueMicrotask(() => window.dispatchEvent(new CustomEvent(EVENT, { detail: fullKey })))
+        queueMicrotask(() => notifyStoredStateChange(fullKey))
         return { key: fullKey, value: resolved }
       })
     },

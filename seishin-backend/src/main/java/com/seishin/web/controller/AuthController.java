@@ -2,6 +2,7 @@ package com.seishin.web.controller;
 
 import com.seishin.security.SecurityUtils;
 import com.seishin.service.AuthService;
+import com.seishin.web.dto.auth.AuthMeDto;
 import com.seishin.web.dto.auth.AuthResponseDto;
 import com.seishin.web.dto.auth.CompleteProfileDto;
 import com.seishin.web.dto.auth.InviteLinkDto;
@@ -29,6 +30,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginDto dto) {
         return ResponseEntity.ok(authService.login(dto));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<AuthMeDto> me() {
+        return ResponseEntity.ok(authService.me(SecurityUtils.currentUser()));
     }
 
     @PostMapping("/profile")

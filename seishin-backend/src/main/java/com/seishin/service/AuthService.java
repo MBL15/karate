@@ -14,6 +14,7 @@ import com.seishin.repository.ParentStudentLinkRepository;
 import com.seishin.repository.UserRepository;
 import com.seishin.security.JwtTokenProvider;
 import com.seishin.security.UserPrincipal;
+import com.seishin.web.dto.auth.AuthMeDto;
 import com.seishin.web.dto.auth.AuthResponseDto;
 import com.seishin.web.dto.auth.CompleteProfileDto;
 import com.seishin.web.dto.auth.InviteLinkDto;
@@ -84,6 +85,20 @@ public class AuthService {
                 .club(club)
                 .build());
         return buildAuthResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public AuthMeDto me(UserPrincipal principal) {
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new UnauthorizedException("Требуется авторизация"));
+        return AuthMeDto.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .login(user.getLogin())
+                .phone(user.getPhone())
+                .role(user.getRole())
+                .clubId(user.getClub() != null ? user.getClub().getId() : null)
+                .build();
     }
 
     @Transactional(readOnly = true)

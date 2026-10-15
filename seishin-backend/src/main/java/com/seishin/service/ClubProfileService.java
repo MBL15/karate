@@ -24,6 +24,16 @@ public class ClubProfileService {
     @Transactional
     public CoachClubProfileDto updateProfile(UserPrincipal coach, CoachClubProfileDto dto) {
         Club club = requireClub(coach);
+        if (dto.getName() != null) {
+            String name = dto.getName().trim();
+            if (name.isEmpty()) {
+                throw new BadRequestException("Укажите название клуба");
+            }
+            if (!name.equals(club.getName()) && clubRepository.findByName(name).isPresent()) {
+                throw new BadRequestException("Клуб с таким названием уже существует");
+            }
+            club.setName(name);
+        }
         if (dto.getDescription() != null) {
             club.setDescription(blankToNull(dto.getDescription()));
         }

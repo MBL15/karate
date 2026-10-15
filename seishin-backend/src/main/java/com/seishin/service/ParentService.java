@@ -1,6 +1,7 @@
 package com.seishin.service;
 
 import com.seishin.domain.entity.*;
+import com.seishin.domain.enums.Role;
 import com.seishin.domain.enums.RsvpStatus;
 import com.seishin.repository.*;
 import com.seishin.security.UserPrincipal;
@@ -197,7 +198,15 @@ public class ParentService {
                 .clubDescription(student.getClub().getDescription())
                 .clubAddress(student.getClub().getAddress())
                 .clubLogo(student.getClub().getLogo())
+                .coachName(resolveCoachName(student.getClub().getId()))
                 .build();
+    }
+
+    private String resolveCoachName(Long clubId) {
+        return userRepository.findByClubIdAndRole(clubId, Role.COACH).stream()
+                .map(User::getName)
+                .findFirst()
+                .orElse(null);
     }
 
     public List<AchievementDto> getAchievements(UserPrincipal parent, Long studentId) {

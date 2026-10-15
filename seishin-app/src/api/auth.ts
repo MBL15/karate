@@ -1,4 +1,4 @@
-import type { AuthResponse, UserRole } from './types'
+import type { AuthMe, AuthResponse, UserRole } from './types'
 import { apiFetch } from './client'
 
 export type LinkedChild = {
@@ -35,6 +35,8 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ login, password, role }),
     }),
+
+  me: () => apiFetch<AuthMe>('/api/auth/me'),
 
   completeProfile: (payload: {
     email?: string

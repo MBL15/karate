@@ -33,7 +33,7 @@ const PUBLIC_AUTH_PATHS = new Set([
 
 const SESSION_EXPIRED = 'Сессия истекла — войдите снова'
 
-/** Срок из поля exp JWT; сервер на просроченный токен отвечает 403, а не 401. */
+/** Локальная проверка exp до запроса; сервер дополнительно отвечает 401 без валидной сессии. */
 export function tokenExpired(token: string): boolean {
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: number }
@@ -47,6 +47,22 @@ function endSession() {
   markSessionExpired()
   void clearPersistedAuth()
   window.dispatchEvent(new Event('seishin-unauthorized'))
+}
+
+function isRoleScopedApi(path: string): boolean {
+  return path.startsWith('/api/coach') || path.startsWith('/api/parent') || path.startsWith('/api/payments')
+}
+
+/** Проверка сессии без apiFetch, чтобы не зациклиться на 403. */
+async function sessionUnauthorized(token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${getApiBase()}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return res.status === 401
+  } catch {
+    return false
+  }
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -79,6 +95,19 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   }
 
   if (res.status === 401 && !publicPath) endSession()
+
+  if (
+    res.status === 403 &&
+    token &&
+    !publicPath &&
+    path !== '/api/auth/me' &&
+    !tokenExpired(token) &&
+    isRoleScopedApi(path) &&
+    (await sessionUnauthorized(token))
+  ) {
+    endSession()
+    throw new ApiError(401, SESSION_EXPIRED)
+  }
 
   if (!res.ok) {
     let message = res.status >= 500 ? 'Ошибка на сервере. Попробуйте ещё раз позже.' : 'Не удалось выполнить запрос'

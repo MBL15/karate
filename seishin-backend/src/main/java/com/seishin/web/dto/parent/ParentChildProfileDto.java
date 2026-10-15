@@ -29,4 +29,5 @@ public class ParentChildProfileDto {
     private String clubDescription;
     private String clubAddress;
     private String clubLogo;
+    private String coachName;
 }

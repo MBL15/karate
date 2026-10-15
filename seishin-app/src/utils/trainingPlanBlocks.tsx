@@ -42,24 +42,41 @@ export function topicTagsToPlanBlocks(picked: string[]): PlanBlock[] {
 export function TrainingBlockTimeline({ blocks, tall }: { blocks: PlanBlock[]; tall?: boolean }) {
   const total = totalPlanMinutes(blocks) || 1
   return (
-    <div className={`flex w-full gap-0.5 overflow-hidden rounded-full ${tall ? 'h-3' : 'h-2'}`} aria-hidden>
+    <div
+      className={`flex w-full overflow-hidden rounded-full bg-border-light/50 ${tall ? 'h-3' : 'h-2.5'}`}
+      role="img"
+      aria-label={blocks.map((b) => b.title).join(', ')}
+    >
       {blocks.map((item) => (
         <span
           key={item.id}
-          className="h-full transition-[flex-grow] duration-500"
-          style={{ flexGrow: item.minutes / total, backgroundColor: TRAINING_BLOCKS[item.kind].color }}
+          className="h-full min-w-[8px] shrink-0 transition-[flex-grow] duration-300"
+          style={{
+            flexGrow: item.minutes,
+            flexBasis: 0,
+            backgroundColor: TRAINING_BLOCKS[item.kind].color,
+          }}
         />
       ))}
+      {total <= 0 && <span className="h-full w-full bg-border-light" />}
     </div>
   )
 }
 
-export function TopicPickedBlocksBar({ picked, className = '' }: { picked: string[]; className?: string }) {
+export function TopicPickedBlocksBar({
+  picked,
+  className = '',
+  tall = true,
+}: {
+  picked: string[]
+  className?: string
+  tall?: boolean
+}) {
   if (picked.length === 0) return null
   const blocks = topicTagsToPlanBlocks(picked)
   return (
     <div className={className}>
-      <TrainingBlockTimeline blocks={blocks} />
+      <TrainingBlockTimeline blocks={blocks} tall={tall} />
       <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-secondary" aria-label="Блоки в плане">
         {picked.map((tag) => {
           const kind = TOPIC_SUGGESTION_KIND[tag] ?? 'warmup'

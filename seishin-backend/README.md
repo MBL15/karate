@@ -52,6 +52,7 @@ Content-Type: application/json
 |-------|------|----------|
 | POST | `/auth/register` | Регистрация по логину и паролю → JWT |
 | POST | `/auth/login` | Вход по логину и паролю → JWT |
+| GET | `/auth/me` | Текущий пользователь по JWT (без нового токена) |
 | POST | `/auth/invite/lookup` | Проверка кода клуба или кода ученика (PARENT) |
 | POST | `/auth/invite/link` | Привязка к существующему ученику по одноразовому коду (PARENT) |
 
@@ -92,6 +93,7 @@ Content-Type: application/json
 | POST | `/coach/competitions/{id}/auto-categorize` | Авто-категоризация |
 | PATCH | `/coach/competitions/registrations/{id}/category` | Ручная категория |
 | GET | `/coach/competitions/{id}/export.xlsx` | Excel-экспорт |
+| GET/PUT | `/coach/club/profile` | Профиль клуба (название, описание, адрес, логотип, JSON поясов) |
 
 ### Родитель
 
@@ -100,7 +102,7 @@ Content-Type: application/json
 | GET/POST | `/parent/children` | Привязанные дети / добавить ребёнка |
 | GET | `/parent/children/{id}/home` | Главная ребёнка |
 | POST | `/parent/children/{id}/training-intent` | Отметка «будет / не будет» на ближайшую тренировку |
-| GET | `/parent/children/{id}/profile` | Профиль |
+| GET | `/parent/children/{id}/profile` | Профиль ребёнка и клуба (описание, адрес, логотип, имя тренера) |
 | GET | `/parent/children/{id}/achievements` | Бейджи и достижения |
 | GET | `/parent/children/{id}/history` | История посещений |
 | GET | `/parent/children/{id}/payments` | Платежи ребёнка |
