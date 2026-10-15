@@ -138,6 +138,11 @@ export const coachApi = {
       method: 'POST',
       body: JSON.stringify({ studentId, badgeId, note }),
     }),
+  revokeBadge: (studentBadgeId: number) =>
+    apiFetch<void>('/api/coach/badges/revoke', {
+      method: 'POST',
+      body: JSON.stringify({ studentBadgeId }),
+    }),
   createInviteCode: (studentId?: number) =>
     apiFetch<{
       code: string

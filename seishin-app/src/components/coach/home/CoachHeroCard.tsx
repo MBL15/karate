@@ -57,8 +57,9 @@ export function CoachHeroCard({
         <span className="absolute -bottom-20 -left-16 size-48 rounded-full bg-white/[0.05]" />
       </span>
 
-      <div className="relative flex items-center gap-3.5">
-        <div className="relative shrink-0">
+      <div className="relative space-y-4">
+        <div className="flex items-start gap-3.5">
+          <div className="relative shrink-0">
           <button
             type="button"
             aria-expanded={menuOpen}
@@ -108,33 +109,37 @@ export function CoachHeroCard({
               <LogoutButton variant="menu" />
             </div>
           )}
-        </div>
+          </div>
 
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white/75">{greeting(now)},</p>
-          <h1 className="truncate font-display text-[1.375rem] leading-tight font-bold tracking-tight">{name.trim().split(/\s+/)[0] || name}</h1>
-          {clubName && (
-            <p className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium">
-              <span className="size-1.5 shrink-0 rounded-full bg-[#4ade80]" aria-hidden />
-              <span className="truncate">{clubName}</span>
-            </p>
-          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white/75">{greeting(now)},</p>
+                <h1 className="font-display text-[1.375rem] leading-snug font-bold tracking-tight break-words">{name}</h1>
+                {clubName && (
+                  <p className="mt-1 inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium">
+                    <span className="size-1.5 shrink-0 rounded-full bg-[#4ade80]" aria-hidden />
+                    <span className="break-words">{clubName}</span>
+                  </p>
+                )}
+              </div>
+              <CoachNotificationBell className="shrink-0 text-white hover:bg-white/10" />
+            </div>
+          </div>
         </div>
-
-        <CoachNotificationBell className="text-white hover:bg-white/10" />
 
         <button
           type="button"
           onClick={() => void copyCode()}
           disabled={!joinCode}
           aria-label={joinCode ? `Код клуба ${joinCode}. Нажмите, чтобы скопировать` : 'Код клуба'}
-          className={`flex shrink-0 flex-col items-center rounded-2xl px-3 py-2 ring-1 backdrop-blur-sm transition active:scale-95 ${
+          className={`flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-2.5 ring-1 backdrop-blur-sm transition active:scale-95 ${
             copied ? 'bg-brand-green/90 ring-white/30' : 'bg-white/10 ring-white/20 hover:bg-white/15'
           }`}
         >
           <span className="text-[10px] font-semibold tracking-wide text-white/70 uppercase">{copied ? 'Скопирован' : 'Код клуба'}</span>
-          <span className="mt-0.5 font-mono text-lg leading-none font-bold tracking-[0.12em]">{joinCode ?? '····'}</span>
-          <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-white/70">
+          <span className="font-mono text-lg leading-none font-bold tracking-[0.12em]">{joinCode ?? '····'}</span>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-white/70">
             {copied ? (
               <IconCheck size={11} />
             ) : (

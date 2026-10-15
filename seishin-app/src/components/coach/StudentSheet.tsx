@@ -81,7 +81,7 @@ export function StudentSheet({
   const fullName = `${student.firstName} ${student.lastName}`
   const groupLine = groups.length > 1 ? groups.map((g) => g.name).join(', ') : groupName
   const styleChanged = Boolean(pickSystem && system && pickSystem.id !== system.id)
-  const { issued: issuedLog } = useCoachIssuedBadges()
+  const { issued: issuedLog, refresh: refreshBadges } = useCoachIssuedBadges()
   const myAwards = badgesOf(issuedLog, student)
   const awards = groupAwards(myAwards)
   const awardsTotal = awards.reduce((sum, a) => sum + a.count, 0)
@@ -106,8 +106,18 @@ export function StudentSheet({
   const moveTarget = moveTargets.find((g) => g.id === moveTo) ?? null
   const openEntries = myAwards.filter((b) => b.badgeId === openAward).sort((a, b) => b.date.localeCompare(a.date))
 
-  const removeAward = (_entry: IssuedBadge) => {
-    setDone('Отозвать значок у родителей пока нельзя — только выдача синхронизируется с сервером')
+  const removeAward = async (entry: IssuedBadge) => {
+    if (entry.id == null) {
+      setDone('Не удалось отозвать — обновите страницу')
+      return
+    }
+    try {
+      await coachApi.revokeBadge(entry.id)
+      await refreshBadges()
+      setDone('Значок отозван — у родителя он исчезнет из дневника')
+    } catch {
+      setDone('Не удалось отозвать значок')
+    }
   }
 
   const confirm = async (level: BeltStep) => {
@@ -560,7 +570,7 @@ export function StudentSheet({
                         <span className="text-[13px] text-text-secondary">{formatDate(entry.date)}</span>
                         <button
                           type="button"
-                          onClick={() => removeAward(entry)}
+                          onClick={() => void removeAward(entry)}
                           className="rounded-full px-2.5 py-1 text-xs font-semibold text-error transition hover:bg-error-bg active:scale-95"
                         >
                           Убрать
@@ -568,11 +578,9 @@ export function StudentSheet({
                       </li>
                     ))}
                   </ul>
-                  {openEntries[0].badgeId > 0 && (
-                    <p className="mt-1.5 text-[11px] leading-snug text-text-muted">
-                      Значок клуба уже ушёл родителям. «Убрать» удалит его только из вашего списка — у родителей он останется.
-                    </p>
-                  )}
+                  <p className="mt-1.5 text-[11px] leading-snug text-text-muted">
+                    «Убрать» отзывает значок у родителя в дневнике и пересчитывает прогресс.
+                  </p>
                 </div>
               )}
             </>

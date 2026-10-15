@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { coachApi } from '../../../api/coach'
 import { ApiError } from '../../../api/client'
 import { IconClipboard, IconPlus } from '../../ui/Icons'
+import { TopicPickedBlocksBar } from '../../../utils/trainingPlanBlocks'
 
 export const TOPICS_KEY = 'training-topics'
 
@@ -81,8 +82,6 @@ export function TrainingTopic({
     }
   }, [groupId, sessionDate, startTime])
 
-  const previewTitle = useMemo(() => buildTopicTitle(picked, customTitle), [picked, customTitle])
-
   const start = () => {
     const parsed = parseTopicTitle(title)
     setPicked(parsed.picked)
@@ -158,10 +157,10 @@ export function TrainingTopic({
               )
             })}
           </div>
-          {(picked.length > 0 || customTitle.trim()) && (
+          {picked.length > 0 && <TopicPickedBlocksBar picked={picked} className="mt-3" />}
+          {customTitle.trim() && (
             <p className="mt-2.5 text-xs text-text-secondary">
-              В плане:{' '}
-              <span className="font-semibold text-text">{previewTitle || '—'}</span>
+              Уточнение: <span className="font-semibold text-text">{customTitle.trim()}</span>
             </p>
           )}
         </div>
@@ -227,7 +226,10 @@ export function TrainingTopic({
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] font-semibold uppercase tracking-wider text-text-muted">{label}</span>
           {showTags ? (
-            <TopicTags title={title} className="mt-1.5" />
+            <>
+              <TopicTags title={title} className="mt-1.5" />
+              {parsed.picked.length > 0 && <TopicPickedBlocksBar picked={parsed.picked} className="mt-2.5" />}
+            </>
           ) : (
             <span className="block font-semibold text-text">{title.trim() || 'Без названия'}</span>
           )}

@@ -99,7 +99,15 @@ export function paidKey(studentId: number, month: string) {
 
 export const BADGES_KEY = 'issued-badges'
 
-export type IssuedBadge = { studentId: number; badgeId: number; name: string; date: string; who?: string; eventKey?: string }
+export type IssuedBadge = {
+  id?: number
+  studentId: number
+  badgeId: number
+  name: string
+  date: string
+  who?: string
+  eventKey?: string
+}
 
 export const PRESET_BADGES: BadgeDefinition[] = [
   { id: -1, name: 'Дисциплина', description: 'Собранность и уважение на татами', cumulative: false, requiredCount: 0 },

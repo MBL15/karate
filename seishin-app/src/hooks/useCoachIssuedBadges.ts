@@ -12,6 +12,7 @@ function toIssuedBadge(row: CoachIssuedBadge): IssuedBadge {
     eventKey = note.slice(BADGE_EVENT_NOTE_PREFIX.length)
   }
   return {
+    id: row.id,
     studentId: row.studentId,
     badgeId: row.badgeId,
     name: row.badgeName,

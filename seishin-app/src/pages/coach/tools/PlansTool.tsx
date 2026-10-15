@@ -3,31 +3,20 @@ import { SectionTitle, ToolCard, ToolShell } from '../../../components/coach/too
 import { IconPlus, IconX } from '../../../components/ui/Icons'
 import { useStoredState } from '../../../hooks/useStoredState'
 import { plural } from '../../../components/coach/home/helpers'
-
-type BlockKind = 'warmup' | 'kihon' | 'kata' | 'kumite' | 'ofp' | 'game' | 'cooldown'
-
-type PlanBlock = { id: string; kind: BlockKind; title: string; minutes: number }
+import {
+  type BlockKind,
+  type PlanBlock,
+  TRAINING_BLOCKS,
+  TrainingBlockTimeline,
+  newPlanBlock,
+  totalPlanMinutes,
+} from '../../../utils/trainingPlanBlocks'
 
 type TrainingPlan = { id: string; name: string; audience: string; blocks: PlanBlock[]; updatedAt: number }
 
-const BLOCKS: Record<BlockKind, { label: string; color: string; soft: string }> = {
-  warmup: { label: 'Разминка', color: '#f59e0b', soft: '#fff4e0' },
-  kihon: { label: 'Кихон', color: '#2563eb', soft: '#eaf1fe' },
-  kata: { label: 'Ката', color: '#7c3aed', soft: '#f3e8ff' },
-  kumite: { label: 'Кумитэ', color: '#ef4444', soft: '#fdecec' },
-  ofp: { label: 'ОФП', color: '#16a34a', soft: '#e8f7ee' },
-  game: { label: 'Игры', color: '#0ea5e9', soft: '#e0f4fd' },
-  cooldown: { label: 'Заминка', color: '#64748b', soft: '#eef1f5' },
-}
-
 const uid = () => Math.random().toString(36).slice(2, 10)
 
-const block = (kind: BlockKind, minutes: number, title = BLOCKS[kind].label): PlanBlock => ({
-  id: uid(),
-  kind,
-  title,
-  minutes,
-})
+const block = newPlanBlock
 
 const TEMPLATES: Omit<TrainingPlan, 'id' | 'updatedAt'>[] = [
   {
@@ -52,25 +41,8 @@ const TEMPLATES: Omit<TrainingPlan, 'id' | 'updatedAt'>[] = [
   },
 ]
 
-const totalMinutes = (blocks: PlanBlock[]) => blocks.reduce((sum, item) => sum + item.minutes, 0)
-
 function minutesLabel(n: number) {
   return `${n} мин`
-}
-
-function Timeline({ blocks, tall }: { blocks: PlanBlock[]; tall?: boolean }) {
-  const total = totalMinutes(blocks) || 1
-  return (
-    <div className={`flex w-full gap-0.5 overflow-hidden rounded-full ${tall ? 'h-3' : 'h-2'}`} aria-hidden>
-      {blocks.map((item) => (
-        <span
-          key={item.id}
-          className="h-full transition-[flex-grow] duration-500"
-          style={{ flexGrow: item.minutes / total, backgroundColor: BLOCKS[item.kind].color }}
-        />
-      ))}
-    </div>
-  )
 }
 
 function PlanCard({ plan, onOpen, action }: { plan: Omit<TrainingPlan, 'id' | 'updatedAt'>; onOpen: () => void; action: string }) {
@@ -88,11 +60,11 @@ function PlanCard({ plan, onOpen, action }: { plan: Omit<TrainingPlan, 'id' | 'u
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-1 text-xs font-semibold text-text">
-          {minutesLabel(totalMinutes(plan.blocks))}
+          {minutesLabel(totalPlanMinutes(plan.blocks))}
         </span>
       </div>
       <div className="mt-3">
-        <Timeline blocks={plan.blocks} />
+        <TrainingBlockTimeline blocks={plan.blocks} />
       </div>
       <p className="mt-3 text-xs font-semibold text-brand-blue">{action}</p>
     </button>
@@ -111,7 +83,7 @@ function PlanEditor({
   onDelete: () => void
 }) {
   const [plan, setPlan] = useState(initial)
-  const total = totalMinutes(plan.blocks)
+  const total = totalPlanMinutes(plan.blocks)
 
   const updateBlock = (id: string, patch: Partial<PlanBlock>) =>
     setPlan((p) => ({ ...p, blocks: p.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)) }))
@@ -147,13 +119,13 @@ function PlanEditor({
           <span className="font-bold text-text">{minutesLabel(total)}</span>
         </div>
         <div className="mt-2">
-          <Timeline blocks={plan.blocks} tall />
+          <TrainingBlockTimeline blocks={plan.blocks} tall />
         </div>
       </ToolCard>
 
       <ul className="space-y-2.5">
         {plan.blocks.map((item, index) => {
-          const meta = BLOCKS[item.kind]
+          const meta = TRAINING_BLOCKS[item.kind]
           return (
             <li key={item.id} className="pop-in flex items-center gap-3 rounded-2xl border border-border-light bg-white p-3 shadow-[var(--shadow-card)]">
               <div className="flex flex-col">
@@ -201,16 +173,16 @@ function PlanEditor({
       <ToolCard>
         <SectionTitle>Добавить блок</SectionTitle>
         <div className="flex flex-wrap gap-2">
-          {(Object.keys(BLOCKS) as BlockKind[]).map((kind) => (
+          {(Object.keys(TRAINING_BLOCKS) as BlockKind[]).map((kind) => (
             <button
               key={kind}
               type="button"
               onClick={() => setPlan((p) => ({ ...p, blocks: [...p.blocks, block(kind, 10)] }))}
               className="flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition active:scale-95"
-              style={{ backgroundColor: BLOCKS[kind].soft, color: BLOCKS[kind].color }}
+              style={{ backgroundColor: TRAINING_BLOCKS[kind].soft, color: TRAINING_BLOCKS[kind].color }}
             >
               <IconPlus size={14} />
-              {BLOCKS[kind].label}
+              {TRAINING_BLOCKS[kind].label}
             </button>
           ))}
         </div>
@@ -328,10 +300,10 @@ export function PlansTool() {
       </div>
 
       <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-text-secondary" aria-label="Цвета блоков">
-        {(Object.keys(BLOCKS) as BlockKind[]).map((kind) => (
+        {(Object.keys(TRAINING_BLOCKS) as BlockKind[]).map((kind) => (
           <li key={kind} className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full" style={{ backgroundColor: BLOCKS[kind].color }} aria-hidden />
-            {BLOCKS[kind].label}
+            <span className="size-2 rounded-full" style={{ backgroundColor: TRAINING_BLOCKS[kind].color }} aria-hidden />
+            {TRAINING_BLOCKS[kind].label}
           </li>
         ))}
       </ul>

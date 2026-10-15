@@ -136,14 +136,20 @@ export function TrainingSheet({
       const serverBadgeId = await resolveBadgeId(badge, badgeDefs)
       const isMine = (b: IssuedBadge) =>
         b.studentId === row.id && b.badgeId === serverBadgeId && b.eventKey === eventKey && (!b.who || b.who === tag)
-      if (issuedLog.some(isMine)) {
-        setError(`«${badge.name}» уже выдан — отозвать значок у родителей пока нельзя`)
+      const existing = issuedLog.find(isMine)
+      if (existing) {
+        if (existing.id == null) {
+          setError('Не удалось отозвать значок — обновите страницу')
+          return
+        }
+        await coachApi.revokeBadge(existing.id)
+        await refreshBadges()
         return
       }
       await coachApi.issueBadge(row.id, serverBadgeId, badgeEventNote(eventKey))
       await refreshBadges()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Не удалось выдать значок')
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Не удалось изменить значок')
     } finally {
       setIssuing(null)
     }
@@ -568,7 +574,9 @@ export function TrainingSheet({
                                       </span>
                                     )}
                                     <BadgeToken name={b.name} size="sm" className={busy ? 'animate-pulse' : ''} />
-                                    <span className="mt-1.5 line-clamp-1 text-[11px] font-semibold text-text">{busy ? 'Выдаю…' : b.name}</span>
+                                    <span className="mt-1.5 line-clamp-1 text-[11px] font-semibold text-text">
+                                      {busy ? (given ? 'Убираю…' : 'Выдаю…') : b.name}
+                                    </span>
                                   </button>
                                 )
                               })}

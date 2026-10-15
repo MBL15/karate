@@ -168,6 +168,12 @@ public class CoachController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/badges/revoke")
+    public ResponseEntity<Void> revokeBadge(@Valid @RequestBody RevokeBadgeDto dto) {
+        coachService.revokeBadge(SecurityUtils.requireCoach(), dto);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/invite-codes")
     public ResponseEntity<InviteCodeResponseDto> createInviteCode(@Valid @RequestBody CreateInviteCodeDto dto) {
         return ResponseEntity.ok(coachService.createInviteCode(SecurityUtils.requireCoach(), dto));

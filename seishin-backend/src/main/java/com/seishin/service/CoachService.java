@@ -421,13 +421,12 @@ public class CoachService {
 
     @Transactional
     public void issueBadge(UserPrincipal coach, IssueBadgeDto dto) {
-        Student student = studentRepository.findById(dto.getStudentId())
-                .orElseThrow(() -> new NotFoundException("Ученик не найден"));
-        if (!student.getClub().getId().equals(coach.getClubId())) {
-            throw new BadRequestException("Ученик другого клуба");
-        }
+        Student student = requireActiveClubStudent(coach, dto.getStudentId());
         BadgeDefinition badge = badgeDefinitionRepository.findById(dto.getBadgeId())
                 .orElseThrow(() -> new NotFoundException("Бейдж не найден"));
+        if (!badge.getClub().getId().equals(coach.getClubId())) {
+            throw new BadRequestException("Бейдж другого клуба");
+        }
         User coachUser = userRepository.findById(coach.getId()).orElseThrow();
         studentBadgeRepository.save(StudentBadge.builder()
                 .student(student)
@@ -437,6 +436,15 @@ public class CoachService {
                 .note(dto.getNote())
                 .build());
         progressService.recalculateProgress(student.getId());
+    }
+
+    @Transactional
+    public void revokeBadge(UserPrincipal coach, RevokeBadgeDto dto) {
+        StudentBadge issued = studentBadgeRepository.findById(dto.getStudentBadgeId())
+                .orElseThrow(() -> new NotFoundException("Выдача значка не найдена"));
+        requireActiveClubStudent(coach, issued.getStudent().getId());
+        studentBadgeRepository.delete(issued);
+        progressService.recalculateProgress(issued.getStudent().getId());
     }
 
     @Transactional
